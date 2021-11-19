@@ -1,74 +1,73 @@
-# config-point
+# ConfigPoint
 A declarative configuration library, where configuration points can be defined, and then later extended to provide customizations for users.
 
+This project is now based at [OHIF](https://github.com/OHIF/config-point.git) as the primary source rather than as a
+a personal project from the wayfarer3130 project, and updates will now come from the OHIF repository.
+
 ## Overview
-`ConfigPoint` is the central location that stores the configuration points for
-both GUI and service elements. This is a declarative service in that it is possible to
-use pure JSON files to configure the GUI elements.  However, it is also functional in that
-non-JSON declarations of configuration points can include functional elements such as ReactJS
-GUI elements.  This combination allows extensions to define a new base configuration point,
-while the use of that can be provided by just configuring the system using JSON files.
+`ConfigPoint` is a library that allows script declarations of configuration values
+to be modified on demand in a declarative fashion by dynamically loading addtional
+configuration files.
 
-The intent of the value of a configuration point object is to be a simple JavaScript
-value, thus being used with property access etc, exactly as though the object
-was configured as a simple JSON object already containing the full definition
-as used in the current context.  It is the construction of the object which the
-ConfigPoint facilitates, so that the object can be constructed with an initial
-default set of values, and then later on extended or updated with a change to
-a deeply nested value.
-
-It is the fact that the configuration values can be changed in a very small/specific
-area which is the useful part of the framework.  For example, suppose an icon
-for a tool was the only thing needing to be changed, and each tool was defined
-in a ConfigPoint, then it would be possible to change the icon by something like:
-```json
-[{
-  'configName':'Icons',
-  extension: {
-    'toolIconToChange':'/icons/myNewToolIcon.svg'
-  }
-}]
+The script declaration can be simple static content, for example:
+```
+const ModalitiesList = ConfigPoint.register({
+  ModalitiesList: [
+    {id:'MR', name: 'MR', description: 'Magnetic Resonance'},
+    {id:'CT', name: 'CT', description: 'Computed Tomography'},
+  ],
+});
 ```
 
-This requires knowledge of the ConfigPoint used to define these paths, but does
-not require modifying the actual code.
+or it can be a combination of functional and declarative elements, for example a ReactJS function could be declared:
 
-## Events
-There are currently no events fired for the configuration elements.
-The current expectation is that the ConfigPoint definitions and changes will
-have been completed by the time the system has completed loading.
-
-The expectation is that when two or more GUI elements are provided, for example
-a patient search versus a study search, the standard ReactJS data model will
-be used, and the config point used for a given element will be changed entirely
-rather than the internal details of the config point being changed.
-
-### Future
-It seems likely that a configuration setting could be done by the user, and
-this may require events to notify components that their configuration has changed.
-
-
-## API
-
-### Declaring API
-The declaration of a new ConfigPoint object is quite simple.  An array of objects
-is provided, each of which is a declaration of a ConfigPoint, in the format:
-```js
-const {ConfigPointName} = ConfigPoint.register([{
-  configName: 'ConfigPointName',
-  configBase: {
-    myConfigurationValue1: 'myValue1',
-    myConfigurationObject2: { arbitraryObject },
-    myConfigurationList3: ['value1', 'value2', ...]
-  }
-}]);
+```
+const DisplayModalities = ConfigPoint.register({
+  Modalities: {
+    ModalitiesList: [
+      {id:'MR', name: 'MR', description: 'Magnetic Resonance', component: props => (<li>MR</li>)},
+      {id:'CT', name: 'CT', description: 'Computed Tomography', component: props => (<li>{props.translation['CT']</li>)})},
+    ],
+    displayList: props => (
+      <ol>${ConfigPoint.Modalities.ModalitiesList.forEach(item => component(props))}</ol>
+    ),
+})
 ```
 
-This then assigns to ConfigPointName, a copy of the current configuration values,
-starting with configBase, combined with all the extension values.  The sequence
-for the study list config point is:
+The function declarations can only be declared in script declarations, as they are compiled components.  However, there isn't any reason that the over-ride can't inherit existing script declarations by referring to them.
 
-![Config Point Study List](./sequence/ConfigPointStudyList.png)
+The remaining sections go through the declarative design for ConfigPoint, followed by the JSON5 configuration files, and then how to make specific types of changes in configuration files.
+
+## Script Declaration of Settings
+(TODO) 
+
+## Dynamic Configuration Loader
+There is a dynamic configuration loader that examines the URL parameters and loads all of the named configuration files.  In order to do this reasonably securely, a path prefix is provided for the configuration elements, and only simple names for configuration files are permitted.
+
+A typical use of this might be:
+```
+  if (window) {
+    // Make the config point accessible in the window
+    window.ConfigPoint = ConfigPoint;
+    // Load the default theme settings
+    const defaultTheme = 'theme';
+    const themeBasePath = '/theme';
+    const themeUrlParameter = 'theme';
+    ConfigPoint.load(defaultTheme, themeBasePath, themeUrlParameter);
+  }
+```
+where the ConfigPoint.load method is called with the default theme, the URL prefix for all themes, and the URL parameter value.  In this case, the default theme is named theme, and is found in a file theme.json5.  The path for that is the relative path /theme, and the parameter on the URL is theme.  
+
+The load function returns a promise when all the themes are loaded.  This is also available as `ConfigPoint.loadPromise`
+for use when the themes need to have been loaded before proceeding, but are disconnected from the actual load declaration.
+
+The theme files are JSON5 encoded, the advantages of which are:
+* Comments are permitted in JSON5
+* Keywords can be used on the left hand side instead of strings, eg  `myValue: 'a value'` 
+* Trailing commas are permitted
+
+## Customizing Existing Settings
+(TODO - this is out of date.
 
 ### Extending API
 An extension to a ConfigPoint is just an additional declaration, but assigning
