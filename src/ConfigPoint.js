@@ -182,6 +182,9 @@ const ConfigPointFunctionality = {
     for (const item of this._extensions._order) {
       mergeObject(dest, item, dest);
     }
+    if( this._loadListeners ) {
+      this._loadListeners.forEach(listener => listener(this));
+    }
   },
 };
 
@@ -213,6 +216,18 @@ const BaseImplementation = {
       config.applyExtensions();
     }
     return config;
+  },
+
+  /** Adds a load listener.  Should already have defined such a point, even if empty. */  
+  addLoadListener(point, callback) {
+    if( !point._loadListeners ) {
+      // Not iterable
+      Object.defineProperty(point,'_loadListeners', {value: []});
+    } 
+    if( point._loadListeners.indexOf(callback)==-1 ) {
+      point._loadListeners.push(callback);
+    }
+    callback(point);
   },
 
   /** Registers the specified configuration items.

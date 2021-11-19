@@ -44,6 +44,41 @@ describe('ConfigPoint.js', () => {
   });
 
   describe('load()', () => {
+    it('loads theme and notifies', () => {
+      let onopen
+      const xhrMock = {
+        open: jest.fn(),
+        send: jest.fn(),
+        addEventListener: (name,func) => { onopen = func; },
+        readyState: 4,
+        status: 200,
+        responseText: '{ newConfigPoint: { val: 5 }, // Comment \n}'
+      };
+    
+      jest.spyOn(window, 'XMLHttpRequest').mockImplementation(() => xhrMock);
+      const callback = jest.fn();
+
+      const {newConfigPoint} = ConfigPoint.register({
+        newConfigPoint: {
+          val:1,
+        },
+      });
+      let listenVal = 0;
+      const func = conf => {
+        listenVal += conf.val;
+      };
+      ConfigPoint.addLoadListener(newConfigPoint,func);
+      ConfigPoint.addLoadListener(newConfigPoint,func);
+      // One call for each listen
+      expect(listenVal).toBe(2);
+      listenVal = 0;
+
+      ConfigPoint.load('theme');
+      onopen();
+      // And only one call here, because the add load only gets added once.
+      expect(listenVal).toBe(5);
+    });
+
     it('loads theme', () => {
       let onopen
       const xhrMock = {
