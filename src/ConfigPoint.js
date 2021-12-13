@@ -24,16 +24,17 @@ function isPrimitive(val) {
  * @returns undefined or the operation looked up
  */
 const getOpValue = (sVal) => {
-  if( !sVal || !sVal.configOperation || sVal.isHidden ) return;
+  if (!sVal || !sVal.configOperation || sVal.isHidden) return;
   const { configOperation } = sVal;
   const ret = ConfigPoint.ConfigPointOperation[configOperation];
-  if( !ret ) {
-    console.log('configOperation', configOperation,'specified but not defined - might be lazy defined later');
+  if (!ret) {
+    console.log('configOperation', configOperation, 'specified but not defined - might be lazy defined later');
   }
   return ret;
 };
 
-/** Creates an object of the same type as src, but as a new copy so that it can be 
+/** 
+ * Creates an object of the same type as src, but as a new copy so that it can be 
  * modified later on.
  * For reference instances, creates a copy of the referenced object.
  * For primitives, returns the primitive.
@@ -55,7 +56,38 @@ export const mergeCreate = function (sVal, context) {
   throw new Error(`The value ${sVal} of type ${tof} isn't a known type for merging.`);
 }
 
-const mergeKey = (base,key,context) => key;
+/**
+ * Gets the position for the given value inside base.
+ * Uses sVal.id, sVal.position and sVal.key to determine the key information.
+ * If none of those are defined, then uses sVal[id] as a key.
+ * If the id isn't found, returns the length of the list
+ * If none are defined and bKey is an int, then returns it.
+ * If none are defined and bKey is a string, treats it as an id
+ * @param {Array} base 
+ * @param {*} bKey 
+ * @param {*} sVal 
+ * @returns 
+ */
+export const arrayPosition = ({ base, bKey, sVal }) => {
+  if (!sVal) return bKey;
+  if (sVal.position !== undefined) return sVal.position;
+  if (!sVal || sVal.id === undefined && typeof (bKey) == 'number') return bKey;
+  const key = sVal.key || 'id';
+  const id = sVal.id === undefined ? bKey : sVal.id;
+  if (id === undefined) return;
+  for (let i = 0; i < base.length; i++) {
+    if (base[i] == id ||
+      base[i] && base[i][key] === id) {
+      return i;
+    }
+  }
+
+  return base.length;
+}
+
+export const objectPosition = ({ base, bKey, sVal }) => {
+  return sVal && (sVal.id || sVal.position) || bKey;
+}
 
 /**
  * Merges into base[key] the value from src[key], if any.  This can end up remove
@@ -67,24 +99,27 @@ const mergeKey = (base,key,context) => key;
  * @returns 
  */
 export function mergeAssign(base, src, key, context) {
-  let bKey = mergeKey(base, key, context);
-  let bVal = base[bKey];
   let sVal = src[key];
+  let bKey = key;
+  if (Array.isArray(base) && !Array.isArray(src)) {
+    bKey = arrayPosition({ base, bKey, sVal, context });
+  }
+  let bVal = base[bKey];
   const opValue = getOpValue(sVal);
-  
-  if( opValue ) {
-    if( opValue.immediate ) {
-      return opValue.immediate( {sVal, base, bKey, key, context} );
+
+  if (opValue) {
+    if (opValue.immediate) {
+      return opValue.immediate({ sVal, base, bKey, key, context });
     } else {
-      const bKeyHidden = '_'+bKey;
-      const bValHidden = base[bKeyHidden] || {...sVal,isHidden: true};
-      Object.defineProperty(base,bKey, {
-        configurable: true, 
+      const bKeyHidden = '_' + bKey;
+      const bValHidden = base[bKeyHidden] || { ...sVal, isHidden: true };
+      Object.defineProperty(base, bKey, {
+        configurable: true,
         enumerable: true,
         get: () => {
           const opSrc = base[bKeyHidden];
-          if( opSrc.value!==undefined ) return opSrc.value;
-          opSrc.value = opValue.getter( {base, bKey, key, context, bKeyHidden} );
+          if (opSrc.value !== undefined) return opSrc.value;
+          opSrc.value = opValue.getter({ base, bKey, key, context, bKeyHidden });
           return opSrc.value;
         },
       });
@@ -95,8 +130,8 @@ export function mergeAssign(base, src, key, context) {
         writable: true,
         value: bValHidden,
       });
-      if( src.value===undefined ) src.value = undefined;
-      bKey = '_'+bKey;
+      if (src.value === undefined) src.value = undefined;
+      bKey = '_' + bKey;
       bVal = base[bKey];
     }
   }
@@ -182,7 +217,7 @@ const ConfigPointFunctionality = {
     for (const item of this._extensions._order) {
       mergeObject(dest, item, dest);
     }
-    if( this._loadListeners ) {
+    if (this._loadListeners) {
       this._loadListeners.forEach(listener => listener(this));
     }
   },
@@ -202,10 +237,10 @@ const BaseImplementation = {
     let config = _configPoints[configName];
     if (!config) {
       _configPoints[configName] = config = Object.assign({}, ConfigPointFunctionality);
-      Object.defineProperty(this,configName, {
+      Object.defineProperty(this, configName, {
         enumerable: true,
         configurable: true,
-        get: () => { return _configPoints[configName]},
+        get: () => { return _configPoints[configName] },
       });
       config._configBase = configBase;
       config._extensions = { _order: [] };
@@ -218,13 +253,13 @@ const BaseImplementation = {
     return config;
   },
 
-  /** Adds a load listener.  Should already have defined such a point, even if empty. */  
+  /** Adds a load listener.  Should already have defined such a point, even if empty. */
   addLoadListener(point, callback) {
-    if( !point._loadListeners ) {
+    if (!point._loadListeners) {
       // Not iterable
-      Object.defineProperty(point,'_loadListeners', {value: []});
-    } 
-    if( point._loadListeners.indexOf(callback)==-1 ) {
+      Object.defineProperty(point, '_loadListeners', { value: [] });
+    }
+    if (point._loadListeners.indexOf(callback) == -1) {
       point._loadListeners.push(callback);
     }
     callback(point);
@@ -258,8 +293,8 @@ const BaseImplementation = {
       } else {
         Object.keys(configItem).forEach(key => {
           const extension = configItem[key];
-          const {configBase} = extension;
-          ret[key] = this.addConfig(key,configBase).extendConfig(extension);
+          const { configBase } = extension;
+          ret[key] = this.addConfig(key, configBase).extendConfig(extension);
         });
       }
     });

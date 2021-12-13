@@ -49,26 +49,26 @@ describe('ConfigPoint.js', () => {
       const xhrMock = {
         open: jest.fn(),
         send: jest.fn(),
-        addEventListener: (name,func) => { onopen = func; },
+        addEventListener: (name, func) => { onopen = func; },
         readyState: 4,
         status: 200,
         responseText: '{ newConfigPoint: { val: 5 }, // Comment \n}'
       };
-    
+
       jest.spyOn(window, 'XMLHttpRequest').mockImplementation(() => xhrMock);
       const callback = jest.fn();
 
-      const {newConfigPoint} = ConfigPoint.register({
+      const { newConfigPoint } = ConfigPoint.register({
         newConfigPoint: {
-          val:1,
+          val: 1,
         },
       });
       let listenVal = 0;
       const func = conf => {
         listenVal += conf.val;
       };
-      ConfigPoint.addLoadListener(newConfigPoint,func);
-      ConfigPoint.addLoadListener(newConfigPoint,func);
+      ConfigPoint.addLoadListener(newConfigPoint, func);
+      ConfigPoint.addLoadListener(newConfigPoint, func);
       // One call for each listen
       expect(listenVal).toBe(2);
       listenVal = 0;
@@ -84,12 +84,12 @@ describe('ConfigPoint.js', () => {
       const xhrMock = {
         open: jest.fn(),
         send: jest.fn(),
-        addEventListener: (name,func) => { onopen = func; },
+        addEventListener: (name, func) => { onopen = func; },
         readyState: 4,
         status: 200,
         responseText: '{ newConfigPoint: { val: 5 }, // Comment \n}'
       };
-    
+
       jest.spyOn(window, 'XMLHttpRequest').mockImplementation(() => xhrMock);
       const callback = jest.fn();
 
@@ -105,12 +105,12 @@ describe('ConfigPoint.js', () => {
       const xhrMock = {
         open: jest.fn(),
         send: jest.fn(),
-        addEventListener: (name,func) => { onopen = func; },
+        addEventListener: (name, func) => { onopen = func; },
         readyState: 4,
         status: 200,
         responseText: '{ newConfigPoint: { val: 5 }, // Comment \n}'
       };
-    
+
       jest.spyOn(window, 'XMLHttpRequest').mockImplementation(() => xhrMock);
       const callback = jest.fn();
       ConfigPoint.load('theme', '/theme', 'theme');
@@ -124,28 +124,28 @@ describe('ConfigPoint.js', () => {
   describe('safeFunction()', () => {
     it('evaluates local variables in an expr', () => {
       const fn = safeFunction('a==="eh" || Math.abs(b)>=3');
-      expect(fn({a:null,b:1})).toBe(false);
-      expect(fn({a:"eh"})).toBe(true);
-      expect(fn({a:null,b:-25})).toBe(true);
+      expect(fn({ a: null, b: 1 })).toBe(false);
+      expect(fn({ a: "eh" })).toBe(true);
+      expect(fn({ a: null, b: -25 })).toBe(true);
     });
     it('throws on window refs', () => {
       const fn = safeFunction('window.alert("Hello")');
-      expect(() => fn({a:null,b:1})).toThrow();
+      expect(() => fn({ a: null, b: 1 })).toThrow();
     });
 
     it('works as a reference transform', () => {
-      const {cp1,cp2} = ConfigPoint.register([
+      const { cp1, cp2 } = ConfigPoint.register([
         {
           cp1: {
             configBase: {
-              func: {configOperation: 'reference', reference: 'funcText', transform: safeFunction},
+              func: { configOperation: 'reference', reference: 'funcText', transform: safeFunction },
               funcText: 'a+1',
             },
             funcText: 'a-1',
           },
           cp2: {
             configBase: {
-              func: {configOperation: 'reference', reference: 'funcText', transform: safeFunction},
+              func: { configOperation: 'reference', reference: 'funcText', transform: safeFunction },
               funcText: 'a+1',
             },
           },
@@ -156,17 +156,17 @@ describe('ConfigPoint.js', () => {
           },
         },
       ]);
-      expect(cp1.func({a:0})).toBe(-1);
-      expect(cp2.func({a:0})).toBe(-1);
+      expect(cp1.func({ a: 0 })).toBe(-1);
+      expect(cp2.func({ a: 0 })).toBe(-1);
     });
 
 
     it('works as a named transform', () => {
-      const {cp1,cp2} = ConfigPoint.register([
+      const { cp1, cp2 } = ConfigPoint.register([
         {
           cp1: {
             configBase: {
-              func: {configOperation: 'safe', reference: 'funcText'},
+              func: { configOperation: 'safe', reference: 'funcText' },
               funcText: 'a+1',
             },
             funcText: 'a-1',
@@ -184,10 +184,10 @@ describe('ConfigPoint.js', () => {
           },
         },
       ]);
-      expect(cp1.func({a:0})).toBe(-1);
-      expect(cp2.func({a:0})).toBe(-1);
+      expect(cp1.func({ a: 0 })).toBe(-1);
+      expect(cp2.func({ a: 0 })).toBe(-1);
       // Check that it is idempotent
-      expect(cp2.func===cp2.func).toBe(true);
+      expect(cp2.func === cp2.func).toBe(true);
     });
   });
 
@@ -326,7 +326,7 @@ describe('ConfigPoint.js', () => {
         },
         {
           two: {
-            refA: { configOperation: 'reference', source: 'one', reference:'a' }
+            refA: { configOperation: 'reference', source: 'one', reference: 'a' }
           },
         }
       ]);
@@ -387,18 +387,21 @@ describe('ConfigPoint.js', () => {
   describe('configOperation()', () => {
     it('DeleteOp', () => {
       const { testConfigPoint } = ConfigPoint.register({
-        configName: CONFIG_NAME,
-        configBase: {
-          toBeDeleted: true,
-          list: [0, 1, 2, 3],
-        },
-        extension: {
+        testConfigPoint: {
+          configBase: {
+            toBeDeleted: true,
+            list: [0, 1, 2, 3],
+            list2: [{ id: 'item', value: 'item' }, { id: 'item2', value: 'item2' }],
+          },
+
           toBeDeleted: DeleteOp.create(1),
-          list: [DeleteOp.at(1)],
-        },
+          list: [DeleteOp.at(1), DeleteOp.id(0)],
+          list2: [DeleteOp.at(1), DeleteOp.id('item')],
+        }
       });
       expect(testConfigPoint.toBeDeleted).toBe(undefined);
-      expect(testConfigPoint.list).toMatchObject([0, 2, 3]);
+      expect(testConfigPoint.list).toMatchObject([2, 3]);
+      expect(testConfigPoint.list2).toMatchObject([]);
     });
 
     it('ReplaceOp', () => {
@@ -408,10 +411,13 @@ describe('ConfigPoint.js', () => {
           list: [0, 1, 2, 3],
         },
         extension: {
-          list: [ReplaceOp.at(1,4)],
+          list: [
+            ReplaceOp.at(1, 4),
+            { configOperation: 'replace', id: 2, value: 5 },
+          ],
         },
       });
-      expect(testConfigPoint.list).toMatchObject([0, 4, 2, 3]);
+      expect(testConfigPoint.list).toMatchObject([0, 4, 5, 3]);
     });
 
     it('ReferenceOp', () => {
@@ -441,38 +447,54 @@ describe('ConfigPoint.js', () => {
       expect(created.arr).toEqual([1, 1.5, 2, 3]);
     });
 
-    it('SortOp basics', () => {
-      const srcPrimitive = [3, 1, 2, 2];
-      const srcArray = [{ value: 3, priority: 1 }, { value: 2, priority: 2 }, { value: 1, priority: 3 }];
-      const srcObject = { three: { value: 3, priority: 1 }, two: { value: 2, priority: 2 }, one: { value: 1, priority: 3 } };
-      const srcFour = { value: 4, priority: 0 };
-      const configBase = {
-        srcPrimitive, srcArray, srcObject,
-        sortPrimitive: ConfigPointOperation.sort.createSort('srcPrimitive'),
-        sortArray: SortOp.createSort('srcArray', 'priority', 'value'),
-        sortObject: SortOp.createSort('srcObject', 'priority'),
-        sortMissing: SortOp.createSort('srcMissing', 'priority'),
-      };
-      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register(
-        {
-          configName: CONFIG_NAME,
-          configBase,
-        },
-        {
-          testConfigPoint2: {
-            configBase: CONFIG_NAME,
-            srcPrimitive: [InsertOp.at(0, 4)],
-            srcObject: { srcFour, three: { priority: 4 }, two: { priority: null } }
+    it('list extend with object', () => {
+      const { point } = ConfigPoint.register({
+        point: {
+          configBase: {
+            list: [3, { id: 'two' }, 0],
+          },
+          list: {
+            0:'zero',
+            two: { extraArg: true },
           },
         },
-      );
-      expect(testConfigPoint.sortPrimitive).toMatchObject([1, 2, 2, 3]);
-      expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
-      expect(testConfigPoint.sortObject).toMatchObject([srcObject.three, srcObject.two, srcObject.one]);
-      expect(testConfigPoint.sortMissing).toMatchObject([]);
-      expect(testConfigPoint2.sortPrimitive).toMatchObject([1, 2, 2, 3, 4]);
-      expect(testConfigPoint2.sortObject).toMatchObject([srcFour, srcObject.one, { ...srcObject.three, priority: 4 }]);
+      });
+      
+      expect(point.list).toMatchObject([3,{id: 'two', extraArg: true}, 'zero']);
     });
+       
+it('sort', () => {
+  const srcPrimitive = [3, 1, 2, 2];
+  const srcArray = [{ value: 3, priority: 1 }, { value: 2, priority: 2 }, { value: 1, priority: 3 }];
+  const srcObject = { three: { value: 3, priority: 1 }, two: { value: 2, priority: 2 }, one: { value: 1, priority: 3 } };
+  const srcFour = { value: 4, priority: 0 };
+  const configBase = {
+    srcPrimitive, srcArray, srcObject,
+    sortPrimitive: ConfigPointOperation.sort.createSort('srcPrimitive'),
+    sortArray: SortOp.createSort('srcArray', 'priority', 'value'),
+    sortObject: SortOp.createSort('srcObject', 'priority'),
+    sortMissing: SortOp.createSort('srcMissing', 'priority'),
+  };
+  const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register(
+    {
+      configName: CONFIG_NAME,
+      configBase,
+    },
+    {
+      testConfigPoint2: {
+        configBase: CONFIG_NAME,
+        srcPrimitive: [InsertOp.at(0, 4)],
+        srcObject: { srcFour, three: { priority: 4 }, two: { priority: null } }
+      },
+    },
+  );
+  expect(testConfigPoint.sortPrimitive).toMatchObject([1, 2, 2, 3]);
+  expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
+  expect(testConfigPoint.sortObject).toMatchObject([srcObject.three, srcObject.two, srcObject.one]);
+  expect(testConfigPoint.sortMissing).toMatchObject([]);
+  expect(testConfigPoint2.sortPrimitive).toMatchObject([1, 2, 2, 3, 4]);
+  expect(testConfigPoint2.sortObject).toMatchObject([srcFour, srcObject.one, { ...srcObject.three, priority: 4 }]);
+});
 
   });
 

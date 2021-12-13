@@ -38,8 +38,6 @@ The function declarations can only be declared in script declarations, as they a
 
 The remaining sections go through the declarative design for ConfigPoint, followed by the JSON5 configuration files, and then how to make specific types of changes in configuration files.
 
-## Script Declaration of Settings
-(TODO) 
 
 ## Dynamic Configuration Loader
 There is a dynamic configuration loader that examines the URL parameters and loads all of the named configuration files.  In order to do this reasonably securely, a path prefix is provided for the configuration elements, and only simple names for configuration files are permitted.
@@ -66,71 +64,133 @@ The theme files are JSON5 encoded, the advantages of which are:
 * Keywords can be used on the left hand side instead of strings, eg  `myValue: 'a value'` 
 * Trailing commas are permitted
 
-## Customizing Existing Settings
-(TODO - this is out of date.
-
-### Extending API
-An extension to a ConfigPoint is just an additional declaration, but assigning
-the value to extension instead of configBase.  Note that extensions can be added
-before or after the ConfigPoint itself is declared, but that the order of the
-extensions may matter, as each extension modifies the previously applied values.
-
-An example extension, showing a list modification, plus a reference value
-modification is shown below.  Note the this contains a simple over-ride
-value that sets the default column width to '12ex', as well as a more
-complex list insertion that inserts someting at position 4, and that
-assigns the value content from a reference instance tooltipClipboardFunction,
-which is discovered in the 'context' for the config point being declared.
-The referenced values allow assigning fixed
+## Script Declaration of Settings
+A declaration of a configurable value is done in straight JavaScript, looking just like a JavaScript file exporting a constant value containing an object.  For example, the following example declares a base configuration value, which will be further customized in the following sections:
 ```js
-ConfigPoint.register([{
-    // Creates the config point StudyListConfigPoint
-    configName: 'StudyListConfigPoint',
-    // The base configuration is PatientListConfigPoint, so this declaration
-    // declares AND extends StudyListConfigPoint
-    configBase: 'PatientListConfigPoint',
-    // And then modify the extension point
-    extension: {
-      // Modify the tableColumns list
-      defaultColumnWidth: '12ex',
-      tableColumns: [
-        {
-          _extendOp: 'insert',
-          position:4,
-          value: {
-            key: 'description',
-            // This is a way to reference an exsiting function, as long
-            // as it is available in the context.  This may still change TBD
-            content: { _reference: 'tooltipClipboardFunction' },
-            gridCol: 4,
-          }
-        },
-        ...
-  ```
+import ConfigPoint from 'config-point';
 
-![Sequence for extension of ConfigPoint](./sequence/ConfigPointStudyListExtension.png)
+export const {point1, point2} = ConfigPoint.register({
+  point1: {
+    list: [1,2,{id:'three', value: 3}],
+    object: {
+      a:'eh', 
+      nestedList: [{id: 'objectInList', objectInList: true},['list in list']],
+      },
+    simple: 5,
+    simpleString: 'string',
+    xFunc: x => (x+1),
+  },
 
-##### Delete
+  point2: {
+    configBase: {
+      unchanged: 'unchanged value',
+      replaced: 'base value of replaced',
+    },
+    replace: 'new replaced value',
+  }
+})
+```
+
+This declares an object point1 that is available for customization, but by default just contains the literal javascript object after the point1 declaration.  THe second declaration uses an alternate form, one that declares
+the starting value, plus a set of changes.  This is useful when the configuration might be declared after already having modifications to it, so that the configBase is applied first, and then any modifications are applied after the base configuration is declared.
+
+The modifications allowed are described in the next section.
+
+## Customizing Existing Settings
+Basic changes to a data structure are made just by declaraing a new value at a given reference path, for example:
+```js
+ConfigPoint.register({
+  point1: {
+    simple: 4,
+    object:{
+      nestedList: [null,['change to list in list'], 'new value'],
+    },
+  }
+})
+```
+
+will change the value point1.simple to 4, but will leave point1.simpleString, xFunc etc alone.
+It will also change the second list element nestedList[1][0] to ['change to list in list'].  The nestedList[0]
+is unchanged because it doesn't specify a value change, while 'new value' is inserted at the end of the list becasue nestedList[2] was previously not defined.
+
+### Basic configOperation definition
+A configOperation is an object which declares an operation name, along with change parameters.  There are two types of operations, immediate and functional.  Immediate operations are executed at the time that the declaration occurs, while functional ones apply a function to generate the desired value at the time it is first requested after any change having been made.  Functional operations MUST not recurse indefinitely into references.  The configOperation declaration looks like:
+```js
+itemToChange: { configOperation: 'operationName', ...parameters },
+```
+Every declaration is a configOperation, with the default operation being 'merge'.
+
+### Immediate Operations
+Immediate operations affect a given value at the time the value is added/changed, and the ordering is important.  Immediate operations normally need to reference the object to change, and to provide a value to change.  The object key to change is declared either by position or id, and the id can additionally specify 
+a key to use.  The position is the simple `object[position]` index position, while the id defaults to
+finding `object[X]` where `X===id || X[key]===id`
+```js
+affectValueAtThree: {configOperation: 'operationName', position: 3, value: 'value to use'},
+affectValueHavingIdThree: {configOperation: 'operationName', id: 3, reference: 'referenceValue'},
+```
+affectValueAtThree changes the value 'affectValueAtThree' by setting the value [3] using the literal 'value to use' as the input to the operation.
+
+affectValueHavingIdThree changes the value having the id 3, and looks up the reference 'referenceValue' to get
+any input to the list object.
+
+### Basic Merge
+The basic merge behaviour depends on the type of the object being merged into and the type of the object specified as the merge value.
+* If the merge value is a primitive, then the merge value being merged into is replaced.
+* If the merge value is a function, then the merge value is replaced with a function bound to that location in the destination
+* If the destination value is null or undefined, then it is replaced by the new value
+* If the destination value is an array, and the merge value is an array, then values are replaced by position, with null value in the replace list being ignored.
+* If the destination value is an array, and the merge value is an object, then values are replaced by id key.
+* If the destination value is an object, and the merge value is an object, then values are replaced by name
+
+For example, assuming the original configuration above, then the declarations:
+```javascript
+list: null,
+// Results in list being null
+list: [null,5,null,4],
+// Results in the list [1,5,{...},4]
+list: { 
+  'three': {extraValue: 'extra'},
+   1: 3, }
+// Results in the list [3,2,{id:'three', value: 3, extraValue: 'extra'}]
+// because the 'three' matches the original item at position 2, and does a merge into it, which adds
+// the key extraValue (destination value was null).
+// Then, the 1 matches the position 0 because it has a literal value of 1, and replaces it with the value 3.
+list: [{configOperation: 'merge', id: 'three', key: 'id', value: {...attrs}}]
+// Results in  the list [1,2,{id:'three', value: 3, ...attrs}]
+```
+
+The name of the config operation is 'merge', but note in the last example that specifying it literally
+changes the interpretation some because it specifies the id and value as full items.
+
+### Delete
 A delete operation can be done either by index, or by value name.  Either a single item
 or an item within a list can be deleted.
 ```js
-toBeDeleted: DeleteOp.create(1)
+simple: DeleteOp.create(1)
 list: [DeleteOp.at(1)]
 ```
+which will delete 'simple' value or the value at position 1 in the list.
 
-##### Replace
-Replacing an item within a list can be done either simple value replacement, or by reference a list item position, 
-for example:
+### Replace
+In addition to the basic replace by value, there is a configOperation replace that replaces a value
+at a specified location.  For example:
 ```js
-toBeReplaced: "new value",
-list: [null,'new value at posn 1'],
-list: {1: 'new value'},
+list: [{configOperation: 'replace', position: 1, value: 5}],
 ```
 
-#### Sorted Lists and Indexed keys
-Instead of referencing simple list values, the ability to create a sorted list
-from a set of objects is quite useful.  This allows directly applying values to
-named sets, instead of having to know about positional values.  For example:
+### Reference
+The immediate operations can referencce another object by using the 'replace' or 'merge' operations
+with a reference key, for example:
+```js
+object: {a: {configOperation: 'replace', reference: 'list'}},
+// Replaces object.a with the list value, AT the time this gets run
+```
+This is an immediate mode replace, and does it at hte time the instruction is located.  See the reference operation for a functional assignment.
+
+### Sorted Lists
+Instead of referencing simple list values, the ability to create a sorted list from a set of objects 
+is quite useful.  There is a basic capability defined by declaring a list element,
+and then matching on the id, as seen above in the merge section
 ```js
       const srcObject = { three: { value: 3, priority: 1 }, two: { value: 2, priority: 2 }, one: { value: 1, priority: 3 } };
       const configBase = {

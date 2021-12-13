@@ -1,5 +1,5 @@
 import ConfigPoint from "./ConfigPoint";
-import {mergeCreate} from "./ConfigPoint";
+import {mergeCreate, arrayPosition, objectPosition} from "./ConfigPoint";
 
 /**
  * Contains the model data for the extensibility level points.
@@ -11,26 +11,32 @@ const configOperation = (configOperation, props) => ({
   _configOperation: configOperation,
   create(props) { return { ...props, configOperation: this._configOperation }; },
   at(position, value, props) { return this.create({ ...props, position, value }) },
+  id(id,value,props) { return this.create({ ...props, id, value}) },
+  key(key,id,value, props) { return this.create({...props, key, id, value})},
   ...props,
 });
 
 // Indicates that this is the default configuration operation
 const InsertOp = configOperation('insert', {
-  immediate({ sVal, base, context }) {
-    if (sVal.position != null) {
-      base.splice(sVal.position, 0, mergeCreate(sVal.value, context));
-    }
+  immediate(props) {
+    const { sVal, base, bKey, context } = props;
+    const position = arrayPosition(props);
+    base.splice(position || 0, 0, mergeCreate(sVal.value, context));
     return base;
   },
 });
 
 // Indicates that this is a delete or remove operation
 const DeleteOp = configOperation('delete', {
-  immediate({ base, bKey, sVal }) {
+  immediate(props) {
+    const { base, bKey, sVal } = props;
     if (Array.isArray(base)) {
-      base.splice(sVal.position, 1);
+      const position = arrayPosition(props)
+      if( position>=0 ) return base.splice(position, 1);
     } else if( base ) {
-      delete base[bKey];
+      const position = objectPosition(props);
+      if( position===undefined ) return;
+      delete base[position];
     }
     return base;
   },
@@ -66,8 +72,15 @@ export const ReferenceOp = configOperation('reference', {
   * Indicates that this is a reference operation.
   */
 export const ReplaceOp = configOperation('replace', {
-  immediate({ sVal, context, base }) {
-    return base.splice(sVal.position,1,mergeCreate(sVal.value, context));
+  immediate(props) {
+    const { sVal, context, base } = props;
+    if( Array.isArray(base) ) {
+      const position = arrayPosition(props);
+      if( position!==undefined ) 
+        return base.splice(position,1,mergeCreate(sVal.value, context));
+    } else {
+      return base[objectPosition(props)] = mergeCreate(sVal.value,context);
+    }
   },
 });
 
