@@ -12,7 +12,6 @@ const configOperation = (configOperation, props) => ({
   create(props) { return { ...props, configOperation: this._configOperation }; },
   at(position, value, props) { return this.create({ ...props, position, value }) },
   id(id,value,props) { return this.create({ ...props, id, value}) },
-  key(key,id,value, props) { return this.create({...props, key, id, value})},
   ...props,
 });
 
@@ -57,11 +56,10 @@ const DeleteOp = configOperation('delete', {
   */
 export const ReferenceOp = configOperation('reference', {
   createCurrent(reference,props) { return this.create({ reference, ...props });  },
-  getter({ base, context, bKeyHidden }) {
-    const {reference, transform, source} = base[bKeyHidden];
+  getter({ base, context, opSrc }) {
+    const {reference, transform, source} = opSrc;
     const useContext = source ? ConfigPoint.addConfig(source) : context;
     if( source && !reference ) return useContext;
-    if( reference===bKeyHidden ) throw new Error(`Reference ${reference} and internal key ${bKeyHidden} must be different`);
     if( !useContext ) return;
     const ret = useContext[reference];
     return transform ? transform(ret) : ret;
@@ -95,16 +93,14 @@ export const ReplaceOp = configOperation('replace', {
 */
 const SortOp = configOperation('sort', {
   createSort(reference, sortKey, valueReference, props) {
-    return this.create({ original: [], ...props, reference, sortKey, valueReference });
+    return this.create({ ...props, reference, sortKey, valueReference });
   },
-  getter({base, bKeyHidden, context}) {
-    const {original,valueReference, sortKey, reference} = base[bKeyHidden];
-    // This implicitly removes all elements of original
-    const referenceValue = reference ? context[reference] : original;
-    if( reference ) {
-      original.length = 0;
-    } 
-
+  getter({base, bKey, context, opSrc}) {
+    if( opSrc.original==undefined ) opSrc.original = [];
+    const {original,valueReference, sortKey, reference, value} = opSrc;
+    const referenceValue = reference ? context[reference] : value;
+    original.length = 0;
+    
     const compare = (a, b) => {
       const valueA = valueReference ? a[valueReference] : a;
       const valueB = valueReference ? b[valueReference] : b;
@@ -114,7 +110,9 @@ const SortOp = configOperation('sort', {
       return sortA < sortB ? -1 : 1;
     };
     if (!referenceValue) return original;
-    let result = Object.values(referenceValue).filter(value => (value != null && (!valueReference || value[valueReference])));
+    let result = Object.values(referenceValue).filter(item => 
+      (item !== null && item!==undefined && (!valueReference || item[valueReference]!==undefined))
+      );
     if (sortKey) {
       result = result.filter(value => value[sortKey] !== null);
     }
@@ -127,10 +125,9 @@ const SortOp = configOperation('sort', {
 
 export const SafeOp = configOperation('safe', {
   createCurrent(reference,props) { return this.create({ reference, ...props  });  },
-  getter({ base, context, bKeyHidden }) {
-    const {reference, source} = base[bKeyHidden];
+  getter({ base, context, opSrc }) {
+    const {reference, source} = opSrc;
     const useContext = source ? ConfigPoint.addConfig(source) : context;
-    if( reference===bKeyHidden ) throw new Error(`Reference ${reference} and internal key ${bKeyHidden} must be different`);
     if( !useContext ) return;
     const ret = useContext[reference];
     return safeFunction(ret);

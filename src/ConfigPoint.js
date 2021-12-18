@@ -89,6 +89,28 @@ export const objectPosition = ({ base, bKey, sVal }) => {
   return sVal && (sVal.id || sVal.position) || bKey;
 }
 
+const getOpSrc = (base, bKey, create, context) => {
+  let { opSrcMap } = base;
+  if (!opSrcMap) {
+    if (!create) return;
+    opSrcMap = {};
+    Object.defineProperty(base, 'opSrcMap', {
+      configurable: true,
+      enumerable: false,
+      value: opSrcMap,
+    })
+  }
+  let opSrc = opSrcMap[bKey];
+  if (opSrc || !create) return opSrc;
+  return opSrcMap[bKey] = mergeCreate(create,context);
+}
+
+export const getAlias = (key, opValue, sVal) =>
+  opValue &&
+  (sVal && sVal.alias ||
+    key[0] == '_' && key.substring(1)) ||
+  key;
+
 /**
  * Merges into base[key] the value from src[key], if any.  This can end up remove
  * base[key], merging into it, replacing it or modifying the value.
@@ -98,45 +120,51 @@ export const objectPosition = ({ base, bKey, sVal }) => {
  * @param {*} context 
  * @returns 
  */
-export function mergeAssign(base, src, key, context) {
+export function mergeAssign(base, src, key, context, bKey) {
   let sVal = src[key];
-  let bKey = key;
+  if (!bKey) bKey = key;
   if (Array.isArray(base) && !Array.isArray(src)) {
     bKey = arrayPosition({ base, bKey, sVal, context });
   }
   let bVal = base[bKey];
   const opValue = getOpValue(sVal);
+  const alias = getAlias(bKey,opValue,sVal);
+  let opSrc = getOpSrc(base, alias);
 
   if (opValue) {
     if (opValue.immediate) {
       return opValue.immediate({ sVal, base, bKey, key, context });
-    } else {
-      const bKeyHidden = '_' + bKey;
-      const bValHidden = base[bKeyHidden] || { ...sVal, isHidden: true };
-      Object.defineProperty(base, bKey, {
-        configurable: true,
-        enumerable: true,
-        get: () => {
-          const opSrc = base[bKeyHidden];
-          if (opSrc.value !== undefined) return opSrc.value;
-          opSrc.value = opValue.getter({ base, bKey, key, context, bKeyHidden });
-          return opSrc.value;
-        },
-      });
-      // Make the background variable hidden by default on the final destination object
-      Object.defineProperty(base, bKeyHidden, {
-        configurable: true,
-        enumerable: true,
-        writable: true,
-        value: bValHidden,
-      });
-      if (src.value === undefined) src.value = undefined;
-      bKey = '_' + bKey;
-      bVal = base[bKey];
     }
+
+    if (!opSrc) {
+      opSrc = getOpSrc(base, alias, sVal, context);
+      if (base[alias]) mergeAssign(opSrc,base,alias, context, 'value');
+    }
+    Object.defineProperty(base, alias, {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        if (opSrc.computedValue !== undefined) return opSrc.computedValue;
+        opSrc.computedValue = opValue.getter({ base, bKey, key, context, opSrc });
+        return opSrc.computedValue;
+      },
+      set: val => {
+        // Should this merge into computedValue?  
+        // Not sure what use case this would hit
+        opSrc.computedValue = val;
+      },
+    });
+    return;
+  }
+  
+  if (opSrc) {
+    base = opSrc;
+    bKey = 'value';
+    bVal = opSrc.value;
+    delete opSrc.computedValue;
   }
 
-  if (Array.isArray(bVal) && sVal == null) return base;
+  if (Array.isArray(base) && sVal == null) return bVal;
 
   if (isPrimitive(bVal)) {
     return base[bKey] = mergeCreate(sVal, context);
@@ -201,6 +229,7 @@ const ConfigPointFunctionality = {
         return keyset;
       }, this._preExistingKeys);
     }
+    delete this.opSrcMap;
     this._applyExtensionsTo(this);
   },
 

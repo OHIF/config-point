@@ -404,7 +404,7 @@ describe('ConfigPoint.js', () => {
       expect(testConfigPoint.list2).toMatchObject([]);
     });
 
-    it('ReplaceOp', () => {
+    it('ReplaceOp-onList', () => {
       const { testConfigPoint } = ConfigPoint.register({
         configName: CONFIG_NAME,
         configBase: {
@@ -419,6 +419,24 @@ describe('ConfigPoint.js', () => {
       });
       expect(testConfigPoint.list).toMatchObject([0, 4, 5, 3]);
     });
+
+    it('ReplaceOp-onObject', () => {
+      const { testConfigPoint } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            obj: { a: 3 },
+            list: [1,2],
+          },
+          obj: {configOperation:'replace', value:{ b: 4 }},
+          list: {configOperation: 'replace', value: []},
+        }
+      });
+
+      expect(testConfigPoint.obj).toMatchObject({b:4});
+      expect(testConfigPoint.obj.a).toBe(undefined);
+      expect(testConfigPoint.list.length).toBe(0);
+    });
+
 
     it('ReferenceOp', () => {
       const nonReference = { reference: 'preExistingItem', };
@@ -454,49 +472,185 @@ describe('ConfigPoint.js', () => {
             list: [3, { id: 'two' }, 0],
           },
           list: {
-            0:'zero',
+            0: 'zero',
             two: { extraArg: true },
+            insert1: { configOperation: 'insert', position: 1, value: 'insert' },
           },
         },
       });
-      
-      expect(point.list).toMatchObject([3,{id: 'two', extraArg: true}, 'zero']);
+
+      expect(point.list).toMatchObject([3, 'insert', { id: 'two', extraArg: true }, 'zero']);
     });
-       
-it('sort', () => {
-  const srcPrimitive = [3, 1, 2, 2];
-  const srcArray = [{ value: 3, priority: 1 }, { value: 2, priority: 2 }, { value: 1, priority: 3 }];
-  const srcObject = { three: { value: 3, priority: 1 }, two: { value: 2, priority: 2 }, one: { value: 1, priority: 3 } };
-  const srcFour = { value: 4, priority: 0 };
-  const configBase = {
-    srcPrimitive, srcArray, srcObject,
-    sortPrimitive: ConfigPointOperation.sort.createSort('srcPrimitive'),
-    sortArray: SortOp.createSort('srcArray', 'priority', 'value'),
-    sortObject: SortOp.createSort('srcObject', 'priority'),
-    sortMissing: SortOp.createSort('srcMissing', 'priority'),
-  };
-  const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register(
-    {
-      configName: CONFIG_NAME,
-      configBase,
-    },
-    {
-      testConfigPoint2: {
-        configBase: CONFIG_NAME,
-        srcPrimitive: [InsertOp.at(0, 4)],
-        srcObject: { srcFour, three: { priority: 4 }, two: { priority: null } }
-      },
-    },
-  );
-  expect(testConfigPoint.sortPrimitive).toMatchObject([1, 2, 2, 3]);
-  expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
-  expect(testConfigPoint.sortObject).toMatchObject([srcObject.three, srcObject.two, srcObject.one]);
-  expect(testConfigPoint.sortMissing).toMatchObject([]);
-  expect(testConfigPoint2.sortPrimitive).toMatchObject([1, 2, 2, 3, 4]);
-  expect(testConfigPoint2.sortObject).toMatchObject([srcFour, srcObject.one, { ...srcObject.three, priority: 4 }]);
-});
 
+    it('external sort', () => {
+      const srcPrimitive = [3, 1, 2, 2];
+      const srcArray = [{ value: 3, priority: 1 }, { value: 2, priority: 2 }, { value: 1, priority: 3 }];
+      const srcObject = { three: { value: 3, priority: 1 }, two: { value: 2, priority: 2 }, one: { value: 1, priority: 3 } };
+      const srcFour = { value: 4, priority: 0 };
+      const configBase = {
+        srcPrimitive, srcArray, srcObject,
+        sortPrimitive: ConfigPointOperation.sort.createSort('srcPrimitive'),
+        sortArray: SortOp.createSort('srcArray', 'priority', 'value'),
+        sortObject: SortOp.createSort('srcObject', 'priority'),
+        sortMissing: SortOp.createSort('srcMissing', 'priority'),
+      };
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register(
+        {
+          configName: CONFIG_NAME,
+          configBase,
+        },
+        {
+          testConfigPoint2: {
+            configBase: CONFIG_NAME,
+            srcPrimitive: [InsertOp.at(0, 4)],
+            srcObject: { srcFour, three: { priority: 4 }, two: { priority: null } }
+          },
+        },
+      );
+      expect(testConfigPoint.sortPrimitive).toMatchObject([1, 2, 2, 3]);
+      expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
+      expect(testConfigPoint.sortObject).toMatchObject([srcObject.three, srcObject.two, srcObject.one]);
+      expect(testConfigPoint.sortMissing).toMatchObject([]);
+      expect(testConfigPoint2.sortPrimitive).toMatchObject([1, 2, 2, 3, 4]);
+      expect(testConfigPoint2.sortObject).toMatchObject([srcFour, srcObject.one, { ...srcObject.three, priority: 4 }]);
+    });
+
+    const sortArray = [{ value: 3, priority: 1 }, { value: 2, priority: 2 }, { value: 1, priority: 3 }];
+
+    /**
+     * An inline sort is one where the sort declaration directly declares the sorting element value.
+     */
+    it('valueFirst', () => {
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            sortArray,
+          },
+          _sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', },
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
+    });
+
+    it('valueLast', () => {
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            _sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', },
+          },
+          sortArray,
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
+    });
+
+    it('simpleInlineExtension', () => {
+      const { testConfigPoint } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', value: sortArray },
+          },
+          sortArray: {
+            value4: { priority: 4, value: 0 },
+          },
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1, 0]);
+    });
+
+    it('inlineValueWithExtension', () => {
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', value: sortArray },
+          },
+          sortArray: {
+            value4: { priority: 4, value: 0 },
+          },
+        },
+        testConfigPoint2: {
+          configBase: 'testConfigPoint',
+          sortArray: {
+            value5: { priority: 5, value: -1 },
+          },
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1, 0]);
+      expect(testConfigPoint2.sortArray).toMatchObject([3, 2, 1, 0, -1]);
+      expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1, 0]);
+    });
+
+    it('listSortTwoLevels', () => {
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            sortArray: [
+              { configOperation: 'sort', value: [3, 2], },
+              [-1, -2],
+            ],
+          },
+          sortArray: [
+            [null, null, 1],
+            { configOperation: 'sort', value: [null, null, -3] },
+          ],
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([[1, 2, 3], [-3, -2, -1]]);
+    });
+
+    it('listSortArrayExtension', () => {
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            sortArray: {
+              configOperation: 'sort', value: [3, 2],
+            },
+          },
+          sortArray: [null, null, 1],
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([1, 2, 3]);
+    });
+
+    it('listWithinListSort', () => {
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          configBase: {
+            sortArray: [
+              { configOperation: 'sort', value: [3, 2], },
+              [null, null, -3],
+            ],
+          },
+          sortArray:
+            [
+              [null, null, 1],
+              { configOperation: 'sort', value: [-1, -2] },
+            ],
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([[1, 2, 3], [-3, -2, -1]]);
+    });
+
+    /**
+     * This is a complex example showing how it is possible to sort lists of sorted lists.
+     * The syntax is a bit obtuse - the child value needs to be referenced as a top level key/value
+     * pair itself.  
+     */
+    it('listSortTwoLevels', () => {
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          sortArray: {
+            configOperation: 'sort', sortKey: 'priority', valueReference: 'value',
+            value: [
+              { priority: 5, value: { configOperation: 'sort', value: [3, 2], } },
+              { priority: 3, value: [-1, -2] },
+            ],
+          },
+        },
+      });
+      expect(testConfigPoint.sortArray).toMatchObject([[-1, -2], [2, 3]]);
+      console.log('testConfigPoint.sortArray=', testConfigPoint.sortArray);
+    });
   });
-
 
 });

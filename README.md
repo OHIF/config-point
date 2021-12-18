@@ -205,6 +205,22 @@ and then matching on the id, as seen above in the merge section
 ```
 This will move the item three, add srcFour to the list, and remove item two (priority null).
 
+It is also possible to transform lists inline, directly within a list or any other object, for example:
+```js
+      const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
+        testConfigPoint: {
+          sortArray: {
+            configOperation: 'sort', sortKey: 'priority', valueReference: 'value',
+            value: [
+              { priority: 5, value: { configOperation: 'sort', value: [3, 2], } },
+              { priority: 3, value: [-1, -2] },
+            ],
+          },
+        },
+      });
+```
+from the unit tests creates a sorted list containing two sorted lists.
+
 #### Reference and Transform Objects
 It is possible to reference another object within the current context root, or the general ConfigPoint object.
 The timing of this is done at the time the config point configuration is generated, so the ordering of adding
