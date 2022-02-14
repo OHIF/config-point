@@ -143,6 +143,9 @@ const { ConfigPointOperation } = ConfigPoint.registerRoot({
       safe: SafeOp,
       reference: ReferenceOp,
       replace: ReplaceOp,
+      functions: {
+        safeFunction,
+      }
     }
   },
 });

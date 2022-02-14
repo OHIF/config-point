@@ -7,11 +7,12 @@ module.exports = {
     filename: "index_bundle.js",
     library: "$",
     libraryTarget: "umd",
+    globalObject: "this",
   },
   module: {
     rules: [
       {
-        test: /\.(js)$/,
+        test: /\.(m?js)$/,
         exclude: /node_modules/,
         use: "babel-loader",
       },
