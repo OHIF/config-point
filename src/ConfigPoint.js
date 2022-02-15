@@ -397,6 +397,7 @@ export const load = (defaultName, path, parameterName) => {
   }
 };
 
+// Create a default implementation
 export const ConfigPoint = { name: 'ConfigPoint', ...BaseImplementation, load };
 
 export default ConfigPoint;
