@@ -6,5 +6,5 @@ const getConfig = ConfigPoint.getConfig.bind(ConfigPoint);
 
 export {
   ConfigPoint, ConfigPointOperation, ReplaceOp, SortOp, ReferenceOp, DeleteOp, InsertOp, safeFunction,
-  register,
+  register, getConfig,
 };
