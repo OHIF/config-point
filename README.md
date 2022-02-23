@@ -45,16 +45,14 @@ There is a dynamic configuration loader that examines the URL parameters and loa
 A typical use of this might be:
 ```
   if (window) {
-    // Make the config point accessible in the window
-    window.ConfigPoint = ConfigPoint;
     // Load the default theme settings
     const defaultTheme = 'theme';
     const themeBasePath = '/theme';
     const themeUrlParameter = 'theme';
-    ConfigPoint.load(defaultTheme, themeBasePath, themeUrlParameter);
+    await loadSearchConfigPoint(defaultTheme, themeBasePath, themeUrlParameter);
   }
 ```
-where the ConfigPoint.load method is called with the default theme, the URL prefix for all themes, and the URL parameter value.  In this case, the default theme is named theme, and is found in a file theme.json5.  The path for that is the relative path /theme, and the parameter on the URL is theme.  
+where the loadSearchConfigPoint method is called with the default theme, the URL prefix for all themes, and the URL parameter value.  In this case, the default theme is named theme, and is found in a file theme.json5.  The path for that is the relative path /theme, and the parameter on the URL is theme.  
 
 The load function returns a promise when all the themes are loaded.  This is also available as `ConfigPoint.loadPromise`
 for use when the themes need to have been loaded before proceeding, but are disconnected from the actual load declaration.

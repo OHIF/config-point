@@ -1,17 +1,12 @@
-// https://github.com/facebook/jest/issues/3613
-// Yarn Doctor: `npx @yarnpkg/doctor .` -->
-// '<rootDir>' warning:
-// Strings should avoid referencing the node_modules directory (prefer require.resolve)
-
 module.exports = {
   verbose: true,
-  roots: ['<rootDir>/src'],
+  roots: ['<rootDir>/tests', '<rootDir>/src'],
   transform: {
     '^.+\\.js$': 'babel-jest',
     '^.+\\.mjs$': 'babel-jest'
   },
-  testMatch: ['<rootDir>/src/**/*.test.js'],
-  testPathIgnorePatterns: ['<rootDir>/node_modules/'],
+  testMatch: ['**/tests/**/*.js'],
+  testPathIgnorePatterns: [],
   testEnvironment: 'jsdom',
   testURL: 'https://hospital.com/?theme=altTheme',
   moduleFileExtensions: ['js', 'mjs'],

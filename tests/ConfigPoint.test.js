@@ -1,33 +1,44 @@
-import { ConfigPoint, ConfigPointOperation, DeleteOp, ReplaceOp, ReferenceOp, SortOp, InsertOp, safeFunction } from './index.js';
+import {
+  ConfigPoint,
+  ConfigPointOperation,
+  DeleteOp,
+  ReplaceOp,
+  ReferenceOp,
+  SortOp,
+  InsertOp,
+  safeFunction,
+  loadSearchConfigPoint,
+} from "../src/index.js";
 // Import for testing internals
-import { mergeCreate, mergeObject } from './ConfigPoint.js';
+import { mergeCreate, mergeObject } from "../src/ConfigPoint.js";
+import "regenerator-runtime";
 
-describe('ConfigPoint.js', () => {
-  const CONFIG_NAME = 'testConfigPoint';
+describe("ConfigPoint.js", () => {
+  const CONFIG_NAME = "testConfigPoint";
   const BASE_CONFIG = {
-    a: '1',
+    a: "1",
     list: [1, 2, 3],
-    obj: { v1: 'v1', v2: 'v2' },
-    obj2: { v1: 'v1', v2: 'v2' },
+    obj: { v1: "v1", v2: "v2" },
+    obj2: { v1: "v1", v2: "v2" },
     sumFunc: (a, b) => a + b,
   };
 
   const MODIFY_NAME = "modify";
   const MODIFY_CONFIG = {
     name: MODIFY_NAME,
-    a: '2',
+    a: "2",
     // Default operation is to merge/replace item by item
     list: ["one", "two", "three", "four"],
     // Default object behaviour is update
-    obj: { v2: 'v2New', v3: 'v3' },
+    obj: { v2: "v2New", v3: "v3" },
     // Over-ride operation to replace entire item
-    obj2: { v2: 'v2New', v3: 'v3', ...ConfigPoint.REPLACE },
+    obj2: { v2: "v2New", v3: "v3", ...ConfigPoint.REPLACE },
     // Default function behaviour is replace, which in this case means add new.
     subFunc: (a, b) => a - b,
   };
 
   const MODIFY_MATCH = {
-    a: '2',
+    a: "2",
     // list: [1.5,'two',3],
     // Default object behaviour is update
     // obj: { v1: 'v1', v2: 'v2New', v3: 'v3' },
@@ -37,25 +48,26 @@ describe('ConfigPoint.js', () => {
     subFunc: MODIFY_CONFIG.subFunc,
   };
 
-
   beforeEach(() => {
     ConfigPoint.clear();
     jest.clearAllMocks();
   });
 
-  describe('load()', () => {
-    it('loads theme and notifies', () => {
-      let onopen
+  describe("loadSearchConfigPoint()", () => {
+    it("loads theme and notifies", async () => {
+      let onopen;
       const xhrMock = {
         open: jest.fn(),
         send: jest.fn(),
-        addEventListener: (name, func) => { onopen = func; },
+        addEventListener: (name, func) => {
+          onopen = func;
+        },
         readyState: 4,
         status: 200,
-        responseText: '{ newConfigPoint: { val: 5 }, // Comment \n}'
+        responseText: "{ newConfigPoint: { val: 5 }, // Comment \n}",
       };
 
-      jest.spyOn(window, 'XMLHttpRequest').mockImplementation(() => xhrMock);
+      jest.spyOn(window, "XMLHttpRequest").mockImplementation(() => xhrMock);
       const callback = jest.fn();
 
       const { newConfigPoint } = ConfigPoint.register({
@@ -64,7 +76,7 @@ describe('ConfigPoint.js', () => {
         },
       });
       let listenVal = 0;
-      const func = conf => {
+      const func = (conf) => {
         listenVal += conf.val;
       };
       ConfigPoint.addLoadListener(newConfigPoint, func);
@@ -73,86 +85,101 @@ describe('ConfigPoint.js', () => {
       expect(listenVal).toBe(2);
       listenVal = 0;
 
-      ConfigPoint.load('theme');
+      const loadPromise = loadSearchConfigPoint("theme");
       onopen();
+      await loadPromise;
       // And only one call here, because the add load only gets added once.
       expect(listenVal).toBe(5);
     });
 
-    it('loads theme', () => {
-      let onopen
+    it("loads theme", async () => {
+      let onopen;
       const xhrMock = {
         open: jest.fn(),
         send: jest.fn(),
-        addEventListener: (name, func) => { onopen = func; },
+        addEventListener: (name, func) => {
+          onopen = func;
+        },
         readyState: 4,
         status: 200,
-        responseText: '{ newConfigPoint: { val: 5 }, // Comment \n}'
+        responseText: "{ newConfigPoint: { val: 5 }, // Comment \n}",
       };
 
-      jest.spyOn(window, 'XMLHttpRequest').mockImplementation(() => xhrMock);
+      jest.spyOn(window, "XMLHttpRequest").mockImplementation(() => xhrMock);
       const callback = jest.fn();
 
-      ConfigPoint.load('theme');
-
-      expect(xhrMock.open).toBeCalledWith('GET', 'theme.json5');
+      const loadPromise = loadSearchConfigPoint("theme");
+      expect(xhrMock.open).toBeCalledWith("GET", "theme.json5");
       onopen();
+
+      await loadPromise;
       expect(ConfigPoint.newConfigPoint.val).toBe(5);
     });
 
-    it('loads argument themes', () => {
-      let onopen
+    it("loads argument themes", async () => {
+      let onopen;
       const xhrMock = {
         open: jest.fn(),
         send: jest.fn(),
-        addEventListener: (name, func) => { onopen = func; },
+        addEventListener: (name, func) => {
+          onopen = func;
+        },
         readyState: 4,
         status: 200,
-        responseText: '{ newConfigPoint: { val: 5 }, // Comment \n}'
+        responseText: "{ newConfigPoint: { val: 5 }, // Comment \n}",
       };
 
-      jest.spyOn(window, 'XMLHttpRequest').mockImplementation(() => xhrMock);
+      jest.spyOn(window, "XMLHttpRequest").mockImplementation(() => xhrMock);
       const callback = jest.fn();
-      ConfigPoint.load('theme', '/theme', 'theme');
-
-      expect(xhrMock.open).toBeCalledWith('GET', '/theme/altTheme.json5');
+      const loadPromise = loadSearchConfigPoint("theme", "/theme", "theme");
+      expect(xhrMock.open).toBeCalledWith("GET", "/theme/altTheme.json5");
       onopen();
-      expect(ConfigPoint.getConfig('newConfigPoint').val).toBe(5);
+
+      await loadPromise;
+      expect(ConfigPoint.getConfig("newConfigPoint").val).toBe(5);
     });
   });
 
-  describe('safeFunction()', () => {
-    it('evaluates local variables in an expr', () => {
+  describe("safeFunction()", () => {
+    it("evaluates local variables in an expr", () => {
       const fn = safeFunction('a==="eh" || Math.abs(b)>=3');
       expect(fn({ a: null, b: 1 })).toBe(false);
       expect(fn({ a: "eh" })).toBe(true);
       expect(fn({ a: null, b: -25 })).toBe(true);
     });
-    it('throws on window refs', () => {
+    it("throws on window refs", () => {
       const fn = safeFunction('window.alert("Hello")');
       expect(() => fn({ a: null, b: 1 })).toThrow();
     });
 
-    it('works as a reference transform', () => {
+    it("works as a reference transform", () => {
       const { cp1, cp2 } = ConfigPoint.register([
         {
           cp1: {
             configBase: {
-              func: { configOperation: 'reference', reference: 'funcText', transform: safeFunction },
-              funcText: 'a+1',
+              func: {
+                configOperation: "reference",
+                reference: "funcText",
+                transform: safeFunction,
+              },
+              funcText: "a+1",
             },
-            funcText: 'a-1',
+            funcText: "a-1",
           },
           cp2: {
             configBase: {
-              func: { configOperation: 'reference', reference: 'funcText', transform: safeFunction },
-              funcText: 'a+1',
+              func: {
+                configOperation: "reference",
+                reference: "funcText",
+                transform: safeFunction,
+              },
+              funcText: "a+1",
             },
           },
         },
         {
           cp2: {
-            funcText: 'a-1',
+            funcText: "a-1",
           },
         },
       ]);
@@ -160,27 +187,26 @@ describe('ConfigPoint.js', () => {
       expect(cp2.func({ a: 0 })).toBe(-1);
     });
 
-
-    it('works as a named transform', () => {
+    it("works as a named transform", () => {
       const { cp1, cp2 } = ConfigPoint.register([
         {
           cp1: {
             configBase: {
-              func: { configOperation: 'safe', reference: 'funcText' },
-              funcText: 'a+1',
+              func: { configOperation: "safe", reference: "funcText" },
+              funcText: "a+1",
             },
-            funcText: 'a-1',
+            funcText: "a-1",
           },
           cp2: {
             configBase: {
-              func: ConfigPointOperation.safe.createCurrent('funcText'),
-              funcText: 'a+1',
+              func: ConfigPointOperation.safe.createCurrent("funcText"),
+              funcText: "a+1",
             },
           },
         },
         {
           cp2: {
-            funcText: 'a-1',
+            funcText: "a-1",
           },
         },
       ]);
@@ -191,70 +217,68 @@ describe('ConfigPoint.js', () => {
     });
   });
 
-  describe('mergeCreate()', () => {
-    it('creates primitives', () => {
+  describe("mergeCreate()", () => {
+    it("creates primitives", () => {
       const aNumber = mergeCreate(123);
       expect(aNumber).toBe(123);
-      const aString = mergeCreate('str');
-      expect(aString).toBe('str');
+      const aString = mergeCreate("str");
+      expect(aString).toBe("str");
       const aBool = mergeCreate(false);
       expect(aBool).toBe(false);
       const aNull = mergeCreate(null);
       expect(aNull).toBe(null);
     });
 
-    it('Copies functions', () => {
+    it("Copies functions", () => {
       const sumFunc = (a, b) => a + b;
       sumFunc.value = 5;
       sumFunc.obj = { nested: true };
       const copyFunc = mergeCreate(sumFunc);
-      expect(typeof (copyFunc)).toBe('function');
+      expect(typeof copyFunc).toBe("function");
       expect(copyFunc.obj).toEqual(sumFunc.obj);
       expect(copyFunc.value).toEqual(sumFunc.value);
     });
 
-    it('Copies arrays', () => {
+    it("Copies arrays", () => {
       const arr = [1, 2, 3];
       const created = mergeCreate(arr);
       expect(created).toEqual(arr);
     });
 
-    it('copies objects', () => {
+    it("copies objects", () => {
       const aCopy = mergeCreate(BASE_CONFIG);
-      expect(aCopy.a).toBe('1');
+      expect(aCopy.a).toBe("1");
       expect(aCopy.list).toEqual([1, 2, 3]);
       expect(aCopy.sumFunc(5, 6)).toBe(11);
     });
-
-
   });
 
-  describe('addConfig()', () => {
-    it('Adds an extension level', () => {
+  describe("addConfig()", () => {
+    it("Adds an extension level", () => {
       const config = ConfigPoint.addConfig(CONFIG_NAME, BASE_CONFIG);
       expect(config).toMatchObject(BASE_CONFIG);
     });
   });
 
-  describe('extendConfig()', () => {
-    it('updates the config data', () => {
+  describe("extendConfig()", () => {
+    it("updates the config data", () => {
       const level = ConfigPoint.addConfig(CONFIG_NAME, BASE_CONFIG);
       level.extendConfig(MODIFY_CONFIG);
       expect(level).toMatchObject(MODIFY_MATCH);
     });
   });
 
-  describe('hasConfig()', () => {
+  describe("hasConfig()", () => {
     ConfigPoint.register({
       configName: CONFIG_NAME,
       configBase: BASE_CONFIG,
     });
     expect(ConfigPoint.hasConfig(CONFIG_NAME)).toBe(true);
-    expect(ConfigPoint.hasConfig('notFound')).toBe(false);
+    expect(ConfigPoint.hasConfig("notFound")).toBe(false);
   });
 
-  describe('register()', () => {
-    it('registers named child items', () => {
+  describe("register()", () => {
+    it("registers named child items", () => {
       const { configOne, configTwo } = ConfigPoint.register({
         configOne: {
           a: 5,
@@ -262,7 +286,7 @@ describe('ConfigPoint.js', () => {
         },
 
         configTwo: {
-          configBase: 'configOne',
+          configBase: "configOne",
           a: 3,
           b: [null, 5],
         },
@@ -273,7 +297,7 @@ describe('ConfigPoint.js', () => {
       expect(configTwo.b[2]).toBe(3);
     });
 
-    it('creates a base configuration', () => {
+    it("creates a base configuration", () => {
       const { testConfigPoint } = ConfigPoint.register({
         configName: CONFIG_NAME,
         configBase: BASE_CONFIG,
@@ -281,7 +305,7 @@ describe('ConfigPoint.js', () => {
       expect(testConfigPoint).toMatchObject(BASE_CONFIG);
     });
 
-    it('creates and updates', () => {
+    it("creates and updates", () => {
       const { testConfigPoint } = ConfigPoint.register({
         configName: CONFIG_NAME,
         configBase: BASE_CONFIG,
@@ -290,78 +314,88 @@ describe('ConfigPoint.js', () => {
       expect(testConfigPoint).toMatchObject(MODIFY_MATCH);
     });
 
-    it('references context value', () => {
+    it("references context value", () => {
       const multiplyFunc = (a, b) => a * b;
-      const registered = ConfigPoint.register([{
-        configName: CONFIG_NAME,
-        configBase: {
-          multiplyFunc,
-          multiply: { configOperation: 'reference', reference: 'multiplyFunc' },
+      const registered = ConfigPoint.register([
+        {
+          configName: CONFIG_NAME,
+          configBase: {
+            multiplyFunc,
+            multiply: {
+              configOperation: "reference",
+              reference: "multiplyFunc",
+            },
+          },
+          extension: MODIFY_CONFIG,
         },
-        extension: MODIFY_CONFIG,
-      }]);
+      ]);
       const { testConfigPoint } = registered;
       expect(testConfigPoint.multiply).toBe(multiplyFunc);
     });
 
-    it('references ConfigPoint', () => {
+    it("references ConfigPoint", () => {
       const { one, two } = ConfigPoint.register({
         one: {
-          refTwo: { configOperation: 'reference', source: 'two' }
+          refTwo: { configOperation: "reference", source: "two" },
         },
         two: {
-          refOne: { configOperation: 'reference', source: 'one' }
+          refOne: { configOperation: "reference", source: "one" },
         },
       });
       expect(one.refTwo).toBe(two);
       expect(two.refOne).toBe(one);
     });
 
-    it('references ConfigPoint source value', () => {
+    it("references ConfigPoint source value", () => {
       const { one, two } = ConfigPoint.register([
         {
           one: {
             a: 3,
-          }
+          },
         },
         {
           two: {
-            refA: { configOperation: 'reference', source: 'one', reference: 'a' }
+            refA: {
+              configOperation: "reference",
+              source: "one",
+              reference: "a",
+            },
           },
-        }
+        },
       ]);
       expect(two.refA).toBe(one.a);
     });
 
-
-    it('extends first, then creates base', () => {
-      const { testConfigPoint } = ConfigPoint.register({
-        configName: CONFIG_NAME,
-        extension: MODIFY_CONFIG,
-      },
+    it("extends first, then creates base", () => {
+      const { testConfigPoint } = ConfigPoint.register(
+        {
+          configName: CONFIG_NAME,
+          extension: MODIFY_CONFIG,
+        },
         {
           configName: CONFIG_NAME,
           configBase: BASE_CONFIG,
-        });
+        }
+      );
       expect(testConfigPoint).toMatchObject(MODIFY_MATCH);
-
     });
 
-    it('extends named base', () => {
-      const { testConfigPoint2 } = ConfigPoint.register({
-        configName: CONFIG_NAME,
-        configBase: BASE_CONFIG,
-        extension: MODIFY_CONFIG,
-      },
+    it("extends named base", () => {
+      const { testConfigPoint2 } = ConfigPoint.register(
         {
-          configName: CONFIG_NAME + '2',
+          configName: CONFIG_NAME,
+          configBase: BASE_CONFIG,
+          extension: MODIFY_CONFIG,
+        },
+        {
+          configName: CONFIG_NAME + "2",
           configBase: CONFIG_NAME,
-        });
+        }
+      );
       expect(testConfigPoint2).toMatchObject(MODIFY_MATCH);
-
     });
 
-    it('Throws on extend of same instance', () => {
+    it("Throws on extend of same instance", () => {
       expect(() => {
         ConfigPoint.register({
           configName: CONFIG_NAME,
@@ -370,41 +404,46 @@ describe('ConfigPoint.js', () => {
       }).toThrow();
     });
 
-    it('Throws on extend twice', () => {
-      expect(() => ConfigPoint.register({
-        configName: CONFIG_NAME,
-        extension: { name: 'name', },
-      },
-        {
-          configName: CONFIG_NAME,
-          extension: { name: 'name', },
-        })).toThrow();
+    it("Throws on extend twice", () => {
+      expect(() =>
+        ConfigPoint.register(
+          {
+            configName: CONFIG_NAME,
+            extension: { name: "name" },
+          },
+          {
+            configName: CONFIG_NAME,
+            extension: { name: "name" },
+          }
+        )
+      ).toThrow();
     });
-
   });
 
-
-  describe('configOperation()', () => {
-    it('DeleteOp', () => {
+  describe("configOperation()", () => {
+    it("DeleteOp", () => {
       const { testConfigPoint } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
             toBeDeleted: true,
             list: [0, 1, 2, 3],
-            list2: [{ id: 'item', value: 'item' }, { id: 'item2', value: 'item2' }],
+            list2: [
+              { id: "item", value: "item" },
+              { id: "item2", value: "item2" },
+            ],
           },
 
           toBeDeleted: DeleteOp.create(1),
           list: [DeleteOp.at(1), DeleteOp.id(0)],
-          list2: [DeleteOp.at(1), DeleteOp.id('item')],
-        }
+          list2: [DeleteOp.at(1), DeleteOp.id("item")],
+        },
       });
       expect(testConfigPoint.toBeDeleted).toBe(undefined);
       expect(testConfigPoint.list).toMatchObject([2, 3]);
       expect(testConfigPoint.list2).toMatchObject([]);
     });
 
-    it('ReplaceOp-onList', () => {
+    it("ReplaceOp-onList", () => {
       const { testConfigPoint } = ConfigPoint.register({
         configName: CONFIG_NAME,
         configBase: {
@@ -413,50 +452,49 @@ describe('ConfigPoint.js', () => {
         extension: {
           list: [
             ReplaceOp.at(1, 4),
-            { configOperation: 'replace', id: 2, value: 5 },
+            { configOperation: "replace", id: 2, value: 5 },
           ],
         },
       });
       expect(testConfigPoint.list).toMatchObject([0, 4, 5, 3]);
     });
 
-    it('ReplaceOp-onObject', () => {
+    it("ReplaceOp-onObject", () => {
       const { testConfigPoint } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
             obj: { a: 3 },
-            list: [1,2],
+            list: [1, 2],
           },
-          obj: {configOperation:'replace', value:{ b: 4 }},
-          list: {configOperation: 'replace', value: []},
-        }
+          obj: { configOperation: "replace", value: { b: 4 } },
+          list: { configOperation: "replace", value: [] },
+        },
       });
 
-      expect(testConfigPoint.obj).toMatchObject({b:4});
+      expect(testConfigPoint.obj).toMatchObject({ b: 4 });
       expect(testConfigPoint.obj.a).toBe(undefined);
       expect(testConfigPoint.list.length).toBe(0);
     });
 
-
-    it('ReferenceOp', () => {
-      const nonReference = { reference: 'preExistingItem', };
+    it("ReferenceOp", () => {
+      const nonReference = { reference: "preExistingItem" };
       const { testConfigPoint } = ConfigPoint.register({
         configName: CONFIG_NAME,
         configBase: {
-          preExistingItem: 'item',
-          reference: ReferenceOp.createCurrent('preExistingItem'),
+          preExistingItem: "item",
+          reference: ReferenceOp.createCurrent("preExistingItem"),
         },
         extension: {
-          reference2: { configOperation: 'reference', reference: 'reference' },
+          reference2: { configOperation: "reference", reference: "reference" },
           nonReference,
         },
       });
-      expect(testConfigPoint.reference).toBe('item');
-      expect(testConfigPoint.reference2).toBe('item');
+      expect(testConfigPoint.reference).toBe("item");
+      expect(testConfigPoint.reference2).toBe("item");
       expect(testConfigPoint.nonReference).toMatchObject(nonReference);
     });
 
-    it('InsertOp', () => {
+    it("InsertOp", () => {
       const arr = [1, 2, 3];
       const base = { arr };
       const inserts = { arr: [InsertOp.at(1, 1.5)] };
@@ -465,34 +503,53 @@ describe('ConfigPoint.js', () => {
       expect(created.arr).toEqual([1, 1.5, 2, 3]);
     });
 
-    it('list extend with object', () => {
+    it("list extend with object", () => {
       const { point } = ConfigPoint.register({
         point: {
           configBase: {
-            list: [3, { id: 'two' }, 0],
+            list: [3, { id: "two" }, 0],
           },
           list: {
-            0: 'zero',
+            0: "zero",
             two: { extraArg: true },
-            insert1: { configOperation: 'insert', position: 1, value: 'insert' },
+            insert1: {
+              configOperation: "insert",
+              position: 1,
+              value: "insert",
+            },
           },
         },
       });
 
-      expect(point.list).toMatchObject([3, 'insert', { id: 'two', extraArg: true }, 'zero']);
+      expect(point.list).toMatchObject([
+        3,
+        "insert",
+        { id: "two", extraArg: true },
+        "zero",
+      ]);
     });
 
-    it('external sort', () => {
+    it("external sort", () => {
       const srcPrimitive = [3, 1, 2, 2];
-      const srcArray = [{ value: 3, priority: 1 }, { value: 2, priority: 2 }, { value: 1, priority: 3 }];
-      const srcObject = { three: { value: 3, priority: 1 }, two: { value: 2, priority: 2 }, one: { value: 1, priority: 3 } };
+      const srcArray = [
+        { value: 3, priority: 1 },
+        { value: 2, priority: 2 },
+        { value: 1, priority: 3 },
+      ];
+      const srcObject = {
+        three: { value: 3, priority: 1 },
+        two: { value: 2, priority: 2 },
+        one: { value: 1, priority: 3 },
+      };
       const srcFour = { value: 4, priority: 0 };
       const configBase = {
-        srcPrimitive, srcArray, srcObject,
-        sortPrimitive: ConfigPointOperation.sort.createSort('srcPrimitive'),
-        sortArray: SortOp.createSort('srcArray', 'priority', 'value'),
-        sortObject: SortOp.createSort('srcObject', 'priority'),
-        sortMissing: SortOp.createSort('srcMissing', 'priority'),
+        srcPrimitive,
+        srcArray,
+        srcObject,
+        sortPrimitive: ConfigPointOperation.sort.createSort("srcPrimitive"),
+        sortArray: SortOp.createSort("srcArray", "priority", "value"),
+        sortObject: SortOp.createSort("srcObject", "priority"),
+        sortMissing: SortOp.createSort("srcMissing", "priority"),
       };
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register(
         {
@@ -503,40 +560,64 @@ describe('ConfigPoint.js', () => {
           testConfigPoint2: {
             configBase: CONFIG_NAME,
             srcPrimitive: [InsertOp.at(0, 4)],
-            srcObject: { srcFour, three: { priority: 4 }, two: { priority: null } }
+            srcObject: {
+              srcFour,
+              three: { priority: 4 },
+              two: { priority: null },
+            },
           },
-        },
+        }
       );
       expect(testConfigPoint.sortPrimitive).toMatchObject([1, 2, 2, 3]);
       expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
-      expect(testConfigPoint.sortObject).toMatchObject([srcObject.three, srcObject.two, srcObject.one]);
+      expect(testConfigPoint.sortObject).toMatchObject([
+        srcObject.three,
+        srcObject.two,
+        srcObject.one,
+      ]);
       expect(testConfigPoint.sortMissing).toMatchObject([]);
       expect(testConfigPoint2.sortPrimitive).toMatchObject([1, 2, 2, 3, 4]);
-      expect(testConfigPoint2.sortObject).toMatchObject([srcFour, srcObject.one, { ...srcObject.three, priority: 4 }]);
+      expect(testConfigPoint2.sortObject).toMatchObject([
+        srcFour,
+        srcObject.one,
+        { ...srcObject.three, priority: 4 },
+      ]);
     });
 
-    const sortArray = [{ value: 3, priority: 1 }, { value: 2, priority: 2 }, { value: 1, priority: 3 }];
+    const sortArray = [
+      { value: 3, priority: 1 },
+      { value: 2, priority: 2 },
+      { value: 1, priority: 3 },
+    ];
 
     /**
      * An inline sort is one where the sort declaration directly declares the sorting element value.
      */
-    it('valueFirst', () => {
+    it("valueFirst", () => {
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
             sortArray,
           },
-          _sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', },
+          _sortArray: {
+            configOperation: "sort",
+            sortKey: "priority",
+            valueReference: "value",
+          },
         },
       });
       expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
     });
 
-    it('valueLast', () => {
+    it("valueLast", () => {
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
-            _sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', },
+            _sortArray: {
+              configOperation: "sort",
+              sortKey: "priority",
+              valueReference: "value",
+            },
           },
           sortArray,
         },
@@ -544,11 +625,16 @@ describe('ConfigPoint.js', () => {
       expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1]);
     });
 
-    it('simpleInlineExtension', () => {
+    it("simpleInlineExtension", () => {
       const { testConfigPoint } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
-            sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', value: sortArray },
+            sortArray: {
+              configOperation: "sort",
+              sortKey: "priority",
+              valueReference: "value",
+              value: sortArray,
+            },
           },
           sortArray: {
             value4: { priority: 4, value: 0 },
@@ -558,18 +644,23 @@ describe('ConfigPoint.js', () => {
       expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1, 0]);
     });
 
-    it('inlineValueWithExtension', () => {
+    it("inlineValueWithExtension", () => {
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
-            sortArray: { configOperation: 'sort', sortKey: 'priority', valueReference: 'value', value: sortArray },
+            sortArray: {
+              configOperation: "sort",
+              sortKey: "priority",
+              valueReference: "value",
+              value: sortArray,
+            },
           },
           sortArray: {
             value4: { priority: 4, value: 0 },
           },
         },
         testConfigPoint2: {
-          configBase: 'testConfigPoint',
+          configBase: "testConfigPoint",
           sortArray: {
             value5: { priority: 5, value: -1 },
           },
@@ -580,30 +671,31 @@ describe('ConfigPoint.js', () => {
       expect(testConfigPoint.sortArray).toMatchObject([3, 2, 1, 0]);
     });
 
-    it('listSortTwoLevels', () => {
+    it("listSortTwoLevels", () => {
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
-            sortArray: [
-              { configOperation: 'sort', value: [3, 2], },
-              [-1, -2],
-            ],
+            sortArray: [{ configOperation: "sort", value: [3, 2] }, [-1, -2]],
           },
           sortArray: [
             [null, null, 1],
-            { configOperation: 'sort', value: [null, null, -3] },
+            { configOperation: "sort", value: [null, null, -3] },
           ],
         },
       });
-      expect(testConfigPoint.sortArray).toMatchObject([[1, 2, 3], [-3, -2, -1]]);
+      expect(testConfigPoint.sortArray).toMatchObject([
+        [1, 2, 3],
+        [-3, -2, -1],
+      ]);
     });
 
-    it('listSortArrayExtension', () => {
+    it("listSortArrayExtension", () => {
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
             sortArray: {
-              configOperation: 'sort', value: [3, 2],
+              configOperation: "sort",
+              value: [3, 2],
             },
           },
           sortArray: [null, null, 1],
@@ -612,45 +704,53 @@ describe('ConfigPoint.js', () => {
       expect(testConfigPoint.sortArray).toMatchObject([1, 2, 3]);
     });
 
-    it('listWithinListSort', () => {
+    it("listWithinListSort", () => {
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
         testConfigPoint: {
           configBase: {
             sortArray: [
-              { configOperation: 'sort', value: [3, 2], },
+              { configOperation: "sort", value: [3, 2] },
               [null, null, -3],
             ],
           },
-          sortArray:
-            [
-              [null, null, 1],
-              { configOperation: 'sort', value: [-1, -2] },
-            ],
+          sortArray: [
+            [null, null, 1],
+            { configOperation: "sort", value: [-1, -2] },
+          ],
         },
       });
-      expect(testConfigPoint.sortArray).toMatchObject([[1, 2, 3], [-3, -2, -1]]);
+      expect(testConfigPoint.sortArray).toMatchObject([
+        [1, 2, 3],
+        [-3, -2, -1],
+      ]);
     });
 
     /**
      * This is a complex example showing how it is possible to sort lists of sorted lists.
      * The syntax is a bit obtuse - the child value needs to be referenced as a top level key/value
-     * pair itself.  
+     * pair itself.
      */
-    it('listSortTwoLevels', () => {
+    it("listSortTwoLevels", () => {
       const { testConfigPoint, testConfigPoint2 } = ConfigPoint.register({
         testConfigPoint: {
           sortArray: {
-            configOperation: 'sort', sortKey: 'priority', valueReference: 'value',
+            configOperation: "sort",
+            sortKey: "priority",
+            valueReference: "value",
             value: [
-              { priority: 5, value: { configOperation: 'sort', value: [3, 2], } },
+              {
+                priority: 5,
+                value: { configOperation: "sort", value: [3, 2] },
+              },
               { priority: 3, value: [-1, -2] },
             ],
           },
         },
       });
-      expect(testConfigPoint.sortArray).toMatchObject([[-1, -2], [2, 3]]);
-      console.log('testConfigPoint.sortArray=', testConfigPoint.sortArray);
+      expect(testConfigPoint.sortArray).toMatchObject([
+        [-1, -2],
+        [2, 3],
+      ]);
     });
   });
-
 });

@@ -1,5 +1,3 @@
-import JSON5 from 'json5';
-
 /**
  * Contains the model data for the extensibility level points.
  * This is implicitly updated by the add/update configuration values.
@@ -9,18 +7,18 @@ const _rootConfigPoints = {};
 
 /**
  * Indicates if any is a primitive value, eg not an object or function.
- * 
- * @param {any} val 
+ *
+ * @param {any} val
  * @returns true if val is primitive
  */
 function isPrimitive(val) {
-  const tof = typeof (val);
-  return val === null || val === undefined || tof == 'number' || tof == 'boolean' || tof == 'string' || tof == 'bigint';
+  const tof = typeof val;
+  return val === null || val === undefined || tof == "number" || tof == "boolean" || tof == "string" || tof == "bigint";
 }
 
 /**
- * 
- * @param {string|int} key 
+ *
+ * @param {string|int} key
  * @returns undefined or the operation looked up
  */
 const getOpValue = (sVal) => {
@@ -28,13 +26,13 @@ const getOpValue = (sVal) => {
   const { configOperation } = sVal;
   const ret = ConfigPoint.ConfigPointOperation[configOperation];
   if (!ret) {
-    console.log('configOperation', configOperation, 'specified but not defined - might be lazy defined later');
+    console.log("configOperation", configOperation, "specified but not defined - might be lazy defined later");
   }
   return ret;
 };
 
-/** 
- * Creates an object of the same type as src, but as a new copy so that it can be 
+/**
+ * Creates an object of the same type as src, but as a new copy so that it can be
  * modified later on.
  * For reference instances, creates a copy of the referenced object.
  * For primitives, returns the primitive.
@@ -45,16 +43,16 @@ export const mergeCreate = function (sVal, context) {
   if (isPrimitive(sVal)) {
     return sVal;
   }
-  const tof = typeof (sVal);
-  if (tof === 'function') {
+  const tof = typeof sVal;
+  if (tof === "function") {
     // TODO - decide between returning raw original and copied/updated value
     return sVal;
   }
-  if (tof === 'object') {
+  if (tof === "object") {
     return mergeObject(Array.isArray(sVal) ? [] : {}, sVal, context);
   }
   throw new Error(`The value ${sVal} of type ${tof} isn't a known type for merging.`);
-}
+};
 
 /**
  * Gets the position for the given value inside base.
@@ -63,62 +61,57 @@ export const mergeCreate = function (sVal, context) {
  * If the id isn't found, returns the length of the list
  * If none are defined and bKey is an int, then returns it.
  * If none are defined and bKey is a string, treats it as an id
- * @param {Array} base 
- * @param {*} bKey 
- * @param {*} sVal 
- * @returns 
+ * @param {Array} base
+ * @param {*} bKey
+ * @param {*} sVal
+ * @returns
  */
 export const arrayPosition = ({ base, bKey, sVal }) => {
   if (!sVal) return bKey;
   if (sVal.position !== undefined) return sVal.position;
-  if (!sVal || sVal.id === undefined && typeof (bKey) == 'number') return bKey;
-  const key = sVal.key || 'id';
+  if (!sVal || (sVal.id === undefined && typeof bKey == "number")) return bKey;
+  const key = sVal.key || "id";
   const id = sVal.id === undefined ? bKey : sVal.id;
   if (id === undefined) return;
   for (let i = 0; i < base.length; i++) {
-    if (base[i] == id ||
-      base[i] && base[i][key] === id) {
+    if (base[i] == id || (base[i] && base[i][key] === id)) {
       return i;
     }
   }
 
   return base.length;
-}
+};
 
 export const objectPosition = ({ base, bKey, sVal }) => {
-  return sVal && (sVal.id || sVal.position) || bKey;
-}
+  return (sVal && (sVal.id || sVal.position)) || bKey;
+};
 
 const getOpSrc = (base, bKey, create, context) => {
   let { opSrcMap } = base;
   if (!opSrcMap) {
     if (!create) return;
     opSrcMap = {};
-    Object.defineProperty(base, 'opSrcMap', {
+    Object.defineProperty(base, "opSrcMap", {
       configurable: true,
       enumerable: false,
       value: opSrcMap,
-    })
+    });
   }
   let opSrc = opSrcMap[bKey];
   if (opSrc || !create) return opSrc;
-  return opSrcMap[bKey] = mergeCreate(create,context);
-}
+  return (opSrcMap[bKey] = mergeCreate(create, context));
+};
 
-export const getAlias = (key, opValue, sVal) =>
-  opValue &&
-  (sVal && sVal.alias ||
-    key[0] == '_' && key.substring(1)) ||
-  key;
+export const getAlias = (key, opValue, sVal) => (opValue && ((sVal && sVal.alias) || (key[0] == "_" && key.substring(1)))) || key;
 
 /**
  * Merges into base[key] the value from src[key], if any.  This can end up remove
  * base[key], merging into it, replacing it or modifying the value.
- * @param {*} base 
- * @param {*} src 
- * @param {*} key 
- * @param {*} context 
- * @returns 
+ * @param {*} base
+ * @param {*} src
+ * @param {*} key
+ * @param {*} context
+ * @returns
  */
 export function mergeAssign(base, src, key, context, bKey) {
   let sVal = src[key];
@@ -128,7 +121,7 @@ export function mergeAssign(base, src, key, context, bKey) {
   }
   let bVal = base[bKey];
   const opValue = getOpValue(sVal);
-  const alias = getAlias(bKey,opValue,sVal);
+  const alias = getAlias(bKey, opValue, sVal);
   let opSrc = getOpSrc(base, alias);
 
   if (opValue) {
@@ -138,28 +131,34 @@ export function mergeAssign(base, src, key, context, bKey) {
 
     if (!opSrc) {
       opSrc = getOpSrc(base, alias, sVal, context);
-      if (base[alias]) mergeAssign(opSrc,base,alias, context, 'value');
+      if (base[alias]) mergeAssign(opSrc, base, alias, context, "value");
     }
     Object.defineProperty(base, alias, {
       configurable: true,
       enumerable: true,
       get: () => {
         if (opSrc.computedValue !== undefined) return opSrc.computedValue;
-        opSrc.computedValue = opValue.getter({ base, bKey, key, context, opSrc });
+        opSrc.computedValue = opValue.getter({
+          base,
+          bKey,
+          key,
+          context,
+          opSrc,
+        });
         return opSrc.computedValue;
       },
-      set: val => {
-        // Should this merge into computedValue?  
+      set: (val) => {
+        // Should this merge into computedValue?
         // Not sure what use case this would hit
         opSrc.computedValue = val;
       },
     });
     return;
   }
-  
+
   if (opSrc) {
     base = opSrc;
-    bKey = 'value';
+    bKey = "value";
     bVal = opSrc.value;
     delete opSrc.computedValue;
   }
@@ -167,7 +166,7 @@ export function mergeAssign(base, src, key, context, bKey) {
   if (Array.isArray(base) && sVal == null) return bVal;
 
   if (isPrimitive(bVal)) {
-    return base[bKey] = mergeCreate(sVal, context);
+    return (base[bKey] = mergeCreate(sVal, context));
   }
 
   return mergeObject(bVal, sVal, context);
@@ -181,10 +180,10 @@ export function mergeAssign(base, src, key, context, bKey) {
  * base.P being assigned from src.P, the src.P operation method "perform" is run instead, which can
  * delete base.P, replace  base.P, insert into a list or remove from a list.
  * TODO - add the SortedListOp to create sorted lists.
- * @param {object|function} base 
- * @param {*} src 
- * @param {*} context 
- * @returns 
+ * @param {object|function} base
+ * @param {*} src
+ * @param {*} context
+ * @returns
  */
 export function mergeObject(base, src, context) {
   for (const key in src) {
@@ -197,11 +196,11 @@ const ConfigPointFunctionality = {
   /**
    * Extends the configuration on this config point instance with the data in data by adding data to the lsit
    * of config point extensions, and then applying all the existing extensions to generate the config point.
-   * @param {*} data 
+   * @param {*} data
    * @returns this object.
    */
   extendConfig(data) {
-    const name = data.name || ("_order" + this._extensions._order.length);
+    const name = data.name || "_order" + this._extensions._order.length;
     const toRemove = this._extensions[name];
     if (toRemove) {
       throw new Error(`Level already has extension ${name}`);
@@ -247,7 +246,7 @@ const ConfigPointFunctionality = {
       mergeObject(dest, item, dest);
     }
     if (this._loadListeners) {
-      this._loadListeners.forEach(listener => listener(this));
+      this._loadListeners.forEach((listener) => listener(this));
     }
   },
 };
@@ -259,7 +258,7 @@ const BaseImplementation = {
    * The ordering of when addConfig is called to provide configBase doesn't matter much.
    */
   addConfig(configName, configBase) {
-    if (typeof (configBase) === 'string') {
+    if (typeof configBase === "string") {
       if (configBase === configName) throw new Error(`The configuration point ${configName} uses itself as a base`);
       configBase = this.addConfig(configBase);
     }
@@ -269,7 +268,9 @@ const BaseImplementation = {
       Object.defineProperty(this, configName, {
         enumerable: true,
         configurable: true,
-        get: () => { return _configPoints[configName] },
+        get: () => {
+          return _configPoints[configName];
+        },
       });
       config._configBase = configBase;
       config._extensions = { _order: [] };
@@ -286,7 +287,7 @@ const BaseImplementation = {
   addLoadListener(point, callback) {
     if (!point._loadListeners) {
       // Not iterable
-      Object.defineProperty(point, '_loadListeners', { value: [] });
+      Object.defineProperty(point, "_loadListeners", { value: [] });
     }
     if (point._loadListeners.indexOf(callback) == -1) {
       point._loadListeners.push(callback);
@@ -320,7 +321,7 @@ const BaseImplementation = {
           ret[configName] = this.addConfig(configName).extendConfig(extension);
         }
       } else {
-        Object.keys(configItem).forEach(key => {
+        Object.keys(configItem).forEach((key) => {
           const extension = configItem[key];
           const { configBase } = extension;
           ret[key] = this.addConfig(key, configBase).extendConfig(extension);
@@ -337,7 +338,7 @@ const BaseImplementation = {
 
   // Gets the given configuration name
   getConfig(config) {
-    if (typeof config === 'string') {
+    if (typeof config === "string") {
       return _configPoints[config];
     }
     return config;
@@ -346,7 +347,7 @@ const BaseImplementation = {
   // Clear all configuration items, mostly used for test purposes.
   clear() {
     _configPoints = {};
-    Object.keys(_rootConfigPoints).forEach(key => {
+    Object.keys(_rootConfigPoints).forEach((key) => {
       this.register(_rootConfigPoints);
     });
   },
@@ -358,46 +359,7 @@ const BaseImplementation = {
   },
 };
 
-/**
- * Loads the given value, as specified by the parameter name path. 
- * parameterName is a list of config-point files to load, named  [a-zA-Z0-9]+(\.((js)|(json)))?  Null means load the default
- * The path is the required path prefix (automatically added), and the default name is what to use if nothing is specified.
- * The defaultName parameter is NOT checked for validity, it is assumed to be allowed. 
- */
-export const load = (defaultName, path, parameterName) => {
-  const queryString = window.location.search;
-  const urlParams = new URLSearchParams(queryString);
-  let loadNames = defaultName ? [defaultName] : null;
-  if (parameterName) {
-    const paramValues = urlParams.getAll(parameterName);
-    if (paramValues && paramValues.length) {
-      paramValues.forEach(item => {
-        if (!item.match(/^[a-zA-Z0-9]+$/)) {
-          throw new Error(`Parameter ${parameterName} has invalid value ${item}`);
-        }
-      });
-      loadNames = paramValues;
-    }
-  }
-  if (loadNames) {
-    loadNames.forEach(name => {
-      var oReq = new XMLHttpRequest();
-      oReq.addEventListener("load", () => {
-        const json = JSON5.parse(oReq.responseText);
-
-        const itemsRegistered = ConfigPoint.register(json);
-        // console.log('ConfigPoint:Loaded', name,'registered', itemsRegistered);
-      });
-      const url = (path && (path + '/' + name) || name) + '.json5';
-      oReq.open("GET", url);
-      oReq.send();
-    });
-  } else {
-    console.log("ConfigPoint: No names to load");
-  }
-};
-
 // Create a default implementation
-export const ConfigPoint = { name: 'ConfigPoint', ...BaseImplementation, load };
+export const ConfigPoint = { name: "ConfigPoint", ...BaseImplementation };
 
 export default ConfigPoint;

@@ -1,0 +1,7 @@
+// Example config point definition file
+{
+  // Define just the testLoad configuration file
+  testLoad: {
+    value: "value",
+  },
+}
