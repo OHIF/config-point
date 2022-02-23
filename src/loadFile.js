@@ -1,5 +1,5 @@
 import JSON5 from "json5";
-import ConfigPoint from "../src/ConfigPoint";
+import ConfigPoint from ".";
 
 /**
  * Loads the given file name object.  Expected to have a resolved filename object (eg full path).

@@ -1,3 +1,5 @@
+import assignHidden from './assignHidden';
+
 /**
  * Contains the model data for the extensibility level points.
  * This is implicitly updated by the add/update configuration values.
@@ -22,7 +24,7 @@ function isPrimitive(val) {
  * @returns undefined or the operation looked up
  */
 const getOpValue = (sVal) => {
-  if (!sVal || !sVal.configOperation || sVal.isHidden) return;
+  if (!sVal || !sVal.configOperation || sVal.isHidden) return undefined;
   const { configOperation } = sVal;
   const ret = ConfigPoint.ConfigPointOperation[configOperation];
   if (!ret) {
@@ -72,7 +74,7 @@ export const arrayPosition = ({ base, bKey, sVal }) => {
   if (!sVal || (sVal.id === undefined && typeof bKey == "number")) return bKey;
   const key = sVal.key || "id";
   const id = sVal.id === undefined ? bKey : sVal.id;
-  if (id === undefined) return;
+  if (id === undefined) return undefined;
   for (let i = 0; i < base.length; i++) {
     if (base[i] == id || (base[i] && base[i][key] === id)) {
       return i;
@@ -89,7 +91,7 @@ export const objectPosition = ({ base, bKey, sVal }) => {
 const getOpSrc = (base, bKey, create, context) => {
   let { opSrcMap } = base;
   if (!opSrcMap) {
-    if (!create) return;
+    if (!create) return undefined;
     opSrcMap = {};
     Object.defineProperty(base, "opSrcMap", {
       configurable: true,
@@ -113,9 +115,10 @@ export const getAlias = (key, opValue, sVal) => (opValue && ((sVal && sVal.alias
  * @param {*} context
  * @returns
  */
-export function mergeAssign(base, src, key, context, bKey) {
+export function mergeAssign(baseSrc, src, key, context, bKeySrc) {
   let sVal = src[key];
-  if (!bKey) bKey = key;
+  let base = baseSrc;
+  let bKey = bKeySrc || key;
   if (Array.isArray(base) && !Array.isArray(src)) {
     bKey = arrayPosition({ base, bKey, sVal, context });
   }
@@ -153,7 +156,7 @@ export function mergeAssign(base, src, key, context, bKey) {
         opSrc.computedValue = val;
       },
     });
-    return;
+    return undefined;
   }
 
   if (opSrc) {
@@ -257,14 +260,12 @@ const BaseImplementation = {
    * inheritting from the levelBase to provide other functionality for the given level.
    * The ordering of when addConfig is called to provide configBase doesn't matter much.
    */
-  addConfig(configName, configBase) {
-    if (typeof configBase === "string") {
-      if (configBase === configName) throw new Error(`The configuration point ${configName} uses itself as a base`);
-      configBase = this.addConfig(configBase);
-    }
+  addConfig(configName, configBaseSrc) {
+    if (configBaseSrc === configName) throw new Error(`The configuration point ${configName} uses itself as a base`);
+    const configBase = typeof configBaseSrc === "string" ? this.addConfig(configBaseSrc) : configBaseSrc;
     let config = _configPoints[configName];
     if (!config) {
-      _configPoints[configName] = config = Object.assign({}, ConfigPointFunctionality);
+      _configPoints[configName] = config = assignHidden({}, ConfigPointFunctionality);
       Object.defineProperty(this, configName, {
         enumerable: true,
         configurable: true,
@@ -272,8 +273,8 @@ const BaseImplementation = {
           return _configPoints[configName];
         },
       });
-      config._configBase = configBase;
-      config._extensions = { _order: [] };
+      Object.defineProperty(config,"_configBase", {value: configBase, writable: true});
+      Object.defineProperty(config,"_extensions", {value: { _order: [] }});
     } else if (configBase) {
       config._configBase = configBase;
     }
