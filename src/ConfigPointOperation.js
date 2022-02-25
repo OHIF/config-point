@@ -40,7 +40,7 @@ const DeleteOp = configOperation("delete", {
       if (position >= 0) return base.splice(position, 1);
     } else if (base) {
       const position = objectPosition(props);
-      if (position === undefined) return;
+      if (position === undefined) return undefined;
       delete base[position];
     }
     return base;
@@ -68,7 +68,7 @@ export const ReferenceOp = configOperation("reference", {
     const { reference, transform, source } = opSrc;
     const useContext = source ? ConfigPoint.addConfig(source) : context;
     if (source && !reference) return useContext;
-    if (!useContext) return;
+    if (!useContext) return undefined;
     const ret = useContext[reference];
     return transform ? transform(ret) : ret;
   },
@@ -86,6 +86,7 @@ export const ReplaceOp = configOperation("replace", {
     } else {
       return (base[objectPosition(props)] = mergeCreate(sVal.value, context));
     }
+    return undefined;
   },
 });
 
@@ -133,10 +134,10 @@ export const SafeOp = configOperation("safe", {
     return this.create({ reference, ...props });
   },
   getter({ base, context, opSrc }) {
-    const { reference, source } = opSrc;
+    const { reference, source, value } = opSrc;
     const useContext = source ? ConfigPoint.addConfig(source) : context;
-    if (!useContext) return;
-    const ret = useContext[reference];
+    if (!useContext && value === undefined) return undefined;
+    const ret = value === undefined ? useContext[reference] : value;
     return safeFunction(ret);
   },
 });
@@ -161,7 +162,7 @@ var reg = /(?:[a-z$_][a-z0-9$_]*(\.[a-z0-9$_]*)*)|(?:[;\\])|(?:"[^"]*")|(?:'[^']
 
 function safeFunction(textExpression) {
   // console.log('safeFunction', textExpression);
-  if (!textExpression) return;
+  if (!textExpression) return () => undefined;
   const safeExpr = textExpression.replace(reg, (val0) => {
     // console.log('Match', val0);
     if (val0.indexOf("Math.") === 0) return val0;

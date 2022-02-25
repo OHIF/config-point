@@ -12,6 +12,7 @@ import {
 // Import for testing internals
 import { mergeCreate, mergeObject } from "../src/ConfigPoint.js";
 import "regenerator-runtime";
+import must from "must";
 
 describe("ConfigPoint.js", () => {
   const CONFIG_NAME = "testConfigPoint";
@@ -150,6 +151,25 @@ describe("ConfigPoint.js", () => {
     it("throws on window refs", () => {
       const fn = safeFunction('window.alert("Hello")');
       expect(() => fn({ a: null, b: 1 })).toThrow();
+    });
+
+    it("acts as inline transform", () => {
+      const { inlineSafeFunction } = ConfigPoint.register({
+        inlineSafeFunction: {
+          configBase: {
+            func: {configOperation: "safe", value: "1+2"},
+            funcRedef: {configOperation: "safe", value: "1+2"},
+            funcLater: 'num+3',
+          },
+          funcRedef: 'num+3',
+          funcLater: {configOperation: "safe"},
+        }
+      });
+      const args = { num: 1 };
+      must(inlineSafeFunction.func).be.function();
+      must(inlineSafeFunction.func(args)).eql(3);
+      must(inlineSafeFunction.funcRedef(args)).eql(4);
+      must(inlineSafeFunction.funcLater(args)).eql(4);
     });
 
     it("works as a reference transform", () => {

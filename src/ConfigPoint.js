@@ -1,4 +1,4 @@
-import assignHidden from './assignHidden';
+import assignHidden from "./assignHidden";
 
 /**
  * Contains the model data for the extensibility level points.
@@ -273,8 +273,8 @@ const BaseImplementation = {
           return _configPoints[configName];
         },
       });
-      Object.defineProperty(config,"_configBase", {value: configBase, writable: true});
-      Object.defineProperty(config,"_extensions", {value: { _order: [] }});
+      Object.defineProperty(config, "_configBase", { value: configBase, writable: true });
+      Object.defineProperty(config, "_extensions", { value: { _order: [] } });
     } else if (configBase) {
       config._configBase = configBase;
     }
