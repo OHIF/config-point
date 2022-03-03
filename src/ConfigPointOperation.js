@@ -158,17 +158,32 @@ const { ConfigPointOperation } = ConfigPoint.registerRoot({
   },
 });
 
-var reg = /(?:[a-z$_][a-z0-9$_]*(\.[a-z0-9$_]*)*)|(?:[;\\])|(?:"[^"]*")|(?:'[^']*')/gi;
+const regUnquoted = /(?:[a-z$_][a-z0-9$_]*(\.[a-z0-9$_]*)*)|(?:[;\\])|(?:`[^`]*`)|(?:"[^"]*")|(?:'[^']*')/gi;
+const regBackquote = /(?:\$\{[^}]*\})/g;
 
+const safeBackquote = (textExpression) => textExpression.replace(regBackquote, (val) => "${" + safeUnquoted(val.substring(2, val.length - 1)) + "}");
+
+const safeUnquoted = (textExpression) =>
+  textExpression.replace(regUnquoted, (val) => {
+    // console.log('Match', val0);
+    if (val.indexOf("Math.") === 0) return val;
+    if (val[0] === '"' || val[0] === "'") return val;
+    if (val[0] === "`") return safeBackquote(val);
+    return "this." + val;
+  });
+
+/**
+ * A function that is designed to be reasonably safe to execute when provided from theme configurations.
+ * In the expression, references are transformed into references to the single parameter value, for example,
+ * if `a` is the text expression, and the parameters is param={a:3} then the function will evaluate to param.a,
+ * and will return 3.  Additionally, Math.X expressions are permitted, as are quotes and back quoted strings.
+ * @param {*} textExpression
+ * @returns
+ */
 function safeFunction(textExpression) {
   // console.log('safeFunction', textExpression);
   if (!textExpression) return () => undefined;
-  const safeExpr = textExpression.replace(reg, (val0) => {
-    // console.log('Match', val0);
-    if (val0.indexOf("Math.") === 0) return val0;
-    if (val0[0] === '"' || val0[0] === "'") return val0;
-    return "this." + val0;
-  });
+  const safeExpr = safeUnquoted(textExpression);
   let fn = Function(`"use strict"; var $data = this;return (${safeExpr})`);
   return (contextData) => fn.bind(contextData)();
 }

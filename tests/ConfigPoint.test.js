@@ -142,6 +142,11 @@ describe("ConfigPoint.js", () => {
   });
 
   describe("safeFunction()", () => {
+    it("evaluates backquote expressions", () => {
+      const fn = safeFunction('`a+b=${a+b}`');
+      expect(fn({ a: 1, b: 2 })).toBe("a+b=3");
+    });
+    
     it("evaluates local variables in an expr", () => {
       const fn = safeFunction('a==="eh" || Math.abs(b)>=3');
       expect(fn({ a: null, b: 1 })).toBe(false);

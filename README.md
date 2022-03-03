@@ -235,6 +235,26 @@ it will be affected by future updates.
 { configOperation: 'reference', source: 'BrainLabellingData' },
 ```
 
+### Safe Functions
+One configOperation that is available is `safe`, which interprets the value of the function as a function
+where the variables are those declared in the single parameter.  It is not supposed to be allowed to access
+other variables in the environment, meaning that the function is safe to execute.  For example, here are some
+safe function examples:
+```js
+fn1: {configOperation: 'safe', value: 'a+b'}
+must(fn1({a:1,b:2})).eql(3)
+
+fn2: {configOperation: 'safe', value: '"max(a,b)="+Math.max(a,b)'}
+must(fn2({a:1,b:2})).eql("max(a,b)=2")
+
+fn3: {configOperation: 'safe', value: '`backquote=${a}`}
+must(fn3({a:"value"}).eql("backquote=value")
+```
+
+Note that things like `window.url="http://otherUrl"` will fail because `parameter.window` isn't provided (unless you include window in the parameters explicitly).
+
+The theme file values are protected, but are not guaranteed to be fully safe, so the configuration values should be treated with some caution.
+
 ### Usage API
 The actual usage of the API is quite simple, a value is declared based on a
 registration request, and then is simply used as a straight/simple value.  This
