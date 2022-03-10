@@ -117,6 +117,22 @@ describe("ConfigPoint.js", () => {
       expect(ConfigPoint.newConfigPoint.val).toBe(5);
     });
 
+    /**
+     * Ensure that if A has a value inheritted by B, and A is changed after B is read, that B gets the new value.
+     */
+    it("extends theme not referenced", () => {
+      const { A, B } = ConfigPoint.register({
+        A: { value: "aValue1" },
+        B: { configBase: 'A' },
+      });
+      A.value.must.eql("aValue1");
+      B.value.must.eql("aValue1");
+      ConfigPoint.register({
+        A: { value: "aValue2" },
+      });
+      B.value.must.eql("aValue2");
+    })
+
     it("loads argument themes", async () => {
       let onopen;
       const xhrMock = {

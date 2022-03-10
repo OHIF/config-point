@@ -195,6 +195,18 @@ export function mergeObject(base, src, context) {
   return base;
 }
 
+/** Adds a load listener.  Should already have defined such a point, even if empty. */
+const addLoadListener = (point, callback) => {
+  if (!point._loadListeners) {
+    // Not iterable
+    Object.defineProperty(point, "_loadListeners", { value: [] });
+  }
+  if (point._loadListeners.indexOf(callback) == -1) {
+    point._loadListeners.push(callback);
+  }
+  callback(point);
+};
+
 const ConfigPointFunctionality = {
   /**
    * Extends the configuration on this config point instance with the data in data by adding data to the lsit
@@ -225,7 +237,7 @@ const ConfigPointFunctionality = {
         if (!this._preExistingKeys[key]) delete this[key];
       }
     } else {
-      this._preExistingKeys = {};
+      Object.defineProperty(this, "_preExistingKeys", { writable: true, configurable: true, value: {} });
       this._preExistingKeys = Object.keys(this).reduce((keyset, key) => {
         keyset[key] = true;
         return keyset;
@@ -233,6 +245,9 @@ const ConfigPointFunctionality = {
     }
     delete this.opSrcMap;
     this._applyExtensionsTo(this);
+    if (this._loadListeners) {
+      this._loadListeners.forEach((listener) => listener(this));
+    }
   },
 
   /** Applies the extensions from this object to the given result.  Allows for applying nested parent extensions,
@@ -247,9 +262,6 @@ const ConfigPointFunctionality = {
     }
     for (const item of this._extensions._order) {
       mergeObject(dest, item, dest);
-    }
-    if (this._loadListeners) {
-      this._loadListeners.forEach((listener) => listener(this));
     }
   },
 };
@@ -266,6 +278,7 @@ const BaseImplementation = {
     let config = _configPoints[configName];
     if (!config) {
       _configPoints[configName] = config = assignHidden({}, ConfigPointFunctionality);
+      Object.defineProperty(config, "_configName", { value: configName });
       Object.defineProperty(this, configName, {
         enumerable: true,
         configurable: true,
@@ -273,28 +286,31 @@ const BaseImplementation = {
           return _configPoints[configName];
         },
       });
-      Object.defineProperty(config, "_configBase", { value: configBase, writable: true });
+      Object.defineProperty(config, "_configBase", { value: undefined, writable: true });
       Object.defineProperty(config, "_extensions", { value: { _order: [] } });
-    } else if (configBase) {
-      config._configBase = configBase;
     }
     if (configBase) {
+      if (config._configBase != configBase) {
+        const configName = configBase._configName;
+        config._configBase = configBase;
+        if (configName) {
+          if (!config._configReload) {
+            Object.defineProperty(config, "_configReload", {
+              value: () => {
+                config.applyExtensions();
+              },
+            });
+          }
+          addLoadListener(configBase, config._configReload);
+          return config;
+        }
+      }
       config.applyExtensions();
     }
     return config;
   },
 
-  /** Adds a load listener.  Should already have defined such a point, even if empty. */
-  addLoadListener(point, callback) {
-    if (!point._loadListeners) {
-      // Not iterable
-      Object.defineProperty(point, "_loadListeners", { value: [] });
-    }
-    if (point._loadListeners.indexOf(callback) == -1) {
-      point._loadListeners.push(callback);
-    }
-    callback(point);
-  },
+  addLoadListener,
 
   /** Registers the specified configuration items.
    * The format of config is an array of extension items.
