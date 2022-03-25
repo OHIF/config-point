@@ -374,6 +374,34 @@ const BaseImplementation = {
     Object.assign(_rootConfigPoints, root);
     return ConfigPoint.register(root);
   },
+
+  /**
+   * Creates a configuration with the given name.
+   * @param {string} configName 
+   * @param {object|string} definition is a config-point definition for the base value of this object
+   *    If definition is a string, then parent shall not be provided.
+   * @param {string|object} parent? is the name of another config-point or a raw object.
+   */
+  createConfiguration(configName, definition, parent) {
+    if (parent) {
+      // Need to generate an intermediate configuration to ensure order of operations
+      // so that the intermediate configuration inherits from parent, and applies definition as an
+      // extension, before being used as the config base of the final config point.
+      const inheritName = `_intermediate_${configName}`;
+      ConfigPoint.register({
+        configName: inheritName,
+        configBase: parent,
+        extension: definition
+      });
+      return ConfigPoint.register( {configName, configBase: inheritName})[configName];
+    } else {
+      return ConfigPoint.register({ configName, configBase: definition })[configName];
+    }
+  },
+
+  extendConfiguration(configName, extension) {
+    return ConfigPoint.register({ configName, extension })[configName];
+  },
 };
 
 // Create a default implementation
