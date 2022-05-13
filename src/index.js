@@ -9,10 +9,14 @@ import importPlugin from "./importPlugin";
 export default ConfigPoint;
 const register = ConfigPoint.register.bind(ConfigPoint);
 const getConfig = ConfigPoint.getConfig.bind(ConfigPoint);
+const extendConfiguration = ConfigPoint.extendConfiguration.bind(ConfigPoint);
+const createConfiguration = ConfigPoint.createConfiguration.bind(ConfigPoint);
 
 export {
   ConfigPoint,
   ConfigPointOperation,
+  extendConfiguration,
+  createConfiguration,
   ReplaceOp,
   SortOp,
   ReferenceOp,
