@@ -377,7 +377,7 @@ const BaseImplementation = {
 
   /**
    * Creates a configuration with the given name.
-   * @param {string} configName 
+   * @param {string} configName
    * @param {object|string} definition is a config-point definition for the base value of this object
    *    If definition is a string, then parent shall not be provided.
    * @param {string|object} parent? is the name of another config-point or a raw object.
@@ -391,9 +391,9 @@ const BaseImplementation = {
       ConfigPoint.register({
         configName: inheritName,
         configBase: parent,
-        extension: definition
+        extension: definition,
       });
-      return ConfigPoint.register( {configName, configBase: inheritName})[configName];
+      return ConfigPoint.register({ configName, configBase: inheritName })[configName];
     } else {
       return ConfigPoint.register({ configName, configBase: definition })[configName];
     }

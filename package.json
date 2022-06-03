@@ -1,6 +1,6 @@
 {
   "name": "config-point",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "A JS library to provide configuration points allowing declarative configuration for programs.",
   "main": "dist/index.js",
   "files": "dist/**/*",
