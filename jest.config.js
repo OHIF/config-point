@@ -8,7 +8,9 @@ module.exports = {
   testMatch: ['**/tests/**/*.js'],
   testPathIgnorePatterns: [],
   testEnvironment: 'jsdom',
-  testURL: 'https://hospital.com/?theme=altTheme',
+  testEnvironmentOptions: {
+    url:'https://hospital.com/?theme=altTheme',
+  },
   moduleFileExtensions: ['js', 'mjs'],
   moduleNameMapper: {
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':

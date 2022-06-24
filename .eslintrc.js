@@ -3,7 +3,7 @@ module.exports = {
     node: true,
     es2021: true,
   },
-  extends: ["prettier", "plugin:node/recommended", "plugin:jest/recommended",],
+  extends: ["plugin:node/recommended", "plugin:jest/recommended",],
   plugins: ["eslint-plugin-prettier", "jest"],
   parser: "babel-eslint",
   parserOptions: {
