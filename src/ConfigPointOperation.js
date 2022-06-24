@@ -64,13 +64,26 @@ export const ReferenceOp = configOperation("reference", {
   createCurrent(reference, props) {
     return this.create({ reference, ...props });
   },
-  getter({ base, context, opSrc }) {
+  getter({ context, opSrc }) {
     const { reference, transform, source } = opSrc;
     const useContext = source ? ConfigPoint.addConfig(source) : context;
     if (source && !reference) return useContext;
     if (!useContext) return undefined;
     const ret = useContext[reference];
     return transform ? transform(ret) : ret;
+  },
+});
+
+export const BindOp = configOperation("bind", {
+  createCurrent(reference, props) {
+    return this.create({ reference, ...props });
+  },
+  getter({ base, context, opSrc }) {
+    const { reference, source, value } = opSrc;
+    const useContext = source ? ConfigPoint.addConfig(source) : context;
+    if (!useContext && value === undefined) return undefined;
+    const ret = value === undefined ? useContext[reference] : value;
+    return typeof ret === "function" ? ret.bind(base) : ret;
   },
 });
 
@@ -149,6 +162,7 @@ const { ConfigPointOperation } = ConfigPoint.registerRoot({
       insert: InsertOp,
       delete: DeleteOp,
       safe: SafeOp,
+      bind: BindOp,
       reference: ReferenceOp,
       replace: ReplaceOp,
       functions: {

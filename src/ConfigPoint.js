@@ -134,7 +134,7 @@ export function mergeAssign(baseSrc, src, key, context, bKeySrc) {
 
     if (!opSrc) {
       opSrc = getOpSrc(base, alias, sVal, context);
-      if (base[alias]) mergeAssign(opSrc, base, alias, context, "value");
+      if (base[alias] && opSrc.replace !== true) mergeAssign(opSrc, base, alias, context, "value");
     }
     Object.defineProperty(base, alias, {
       configurable: true,

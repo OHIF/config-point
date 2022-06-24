@@ -162,7 +162,7 @@ describe("ConfigPoint.js", () => {
       const fn = safeFunction('`a+b=${a+b}`');
       expect(fn({ a: 1, b: 2 })).toBe("a+b=3");
     });
-    
+
     it("evaluates local variables in an expr", () => {
       const fn = safeFunction('a==="eh" || Math.abs(b)>=3');
       expect(fn({ a: null, b: 1 })).toBe(false);
@@ -178,12 +178,12 @@ describe("ConfigPoint.js", () => {
       const { inlineSafeFunction } = ConfigPoint.register({
         inlineSafeFunction: {
           configBase: {
-            func: {configOperation: "safe", value: "1+2"},
-            funcRedef: {configOperation: "safe", value: "1+2"},
+            func: { configOperation: "safe", value: "1+2" },
+            funcRedef: { configOperation: "safe", value: "1+2" },
             funcLater: 'num+3',
           },
           funcRedef: 'num+3',
-          funcLater: {configOperation: "safe"},
+          funcLater: { configOperation: "safe" },
         }
       });
       const args = { num: 1 };
@@ -191,6 +191,24 @@ describe("ConfigPoint.js", () => {
       must(inlineSafeFunction.func(args)).eql(3);
       must(inlineSafeFunction.funcRedef(args)).eql(4);
       must(inlineSafeFunction.funcLater(args)).eql(4);
+    });
+
+    it("provided value replaces base value", () => {
+      const { inlineSafeFunction } = ConfigPoint.register({
+        inlineSafeFunction: {
+          configBase: {
+            func: { description: "this is not a function"},
+          },
+          func: { configOperation: "safe", replace: true, value: "1+2" },
+        }
+      });
+      const args = { num: 1 };
+      must(inlineSafeFunction.func).be.function();
+      must(inlineSafeFunction.func(args)).eql(3);
+      ConfigPoint.extendConfiguration("inlineSafeFunction", {
+        func: "2+3",
+      });
+      must(inlineSafeFunction.func(args)).eql(5);
     });
 
     it("works as a reference transform", () => {
@@ -792,6 +810,49 @@ describe("ConfigPoint.js", () => {
         [-1, -2],
         [2, 3],
       ]);
+    });
+  });
+
+  describe("bindOp", () => {
+    it("binds at top level", () => {
+      const config = ConfigPoint.createConfiguration("bindConfig", {
+        value: 5,
+        func: {
+          configOperation: "bind", value: function () { return this.value; },
+        },
+      });
+      const { func } = config;
+      expect(func()).toBe(5);
+    });
+    it("binds nested", () => {
+      const config = ConfigPoint.createConfiguration("bindConfig", {
+        nested: {
+          value: 5,
+          func: {
+            configOperation: "bind", value: function () { return this.value; },
+          },
+        },
+      });
+      const { func } = config.nested;
+      expect(func()).toBe(5);
+    });
+
+    it("binds to next object", () => {
+      const config = ConfigPoint.createConfiguration("bindConfig", {
+        nested: {
+          value: 5,
+          func: {
+            configOperation: "bind", value: function () { return this.value; },
+          },
+        },
+      });
+      const config2 = ConfigPoint.createConfiguration("bindConfig2", {
+        nested: {
+          value: "replacedValue",
+        },
+      }, config)
+      const { func } = config2.nested;
+      expect(func()).toBe("replacedValue");
     });
   });
 });
