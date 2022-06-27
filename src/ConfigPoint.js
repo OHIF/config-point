@@ -291,9 +291,9 @@ const BaseImplementation = {
     }
     if (configBase) {
       if (config._configBase != configBase) {
-        const configName = configBase._configName;
+        const configBaseName = configBase._configName;
         config._configBase = configBase;
-        if (configName) {
+        if (configBaseName) {
           if (!config._configReload) {
             Object.defineProperty(config, "_configReload", {
               value: () => {
