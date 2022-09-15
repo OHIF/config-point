@@ -1,9 +1,9 @@
 const path = require('path');
 const pkg = require('../package.json');
 
-const outputFile = 'config-point.js';
+const outputFile = 'index.umd.js';
 const rootDir = path.resolve(__dirname, '../');
-const outputFolder = path.join(__dirname, '../dist');
+const outputFolder = path.join(__dirname, '../dist/');
 
 const config = {
   mode: 'production',
@@ -15,36 +15,7 @@ const config = {
     library: pkg.name,
     libraryTarget: 'umd',
     umdNamedDefine: true,
-    globalObject: "typeof self !== 'undefined' ? self : this",
   },
-  externals: [
-    {
-      react: {
-        root: 'React',
-        commonjs2: 'react',
-        commonjs: 'react',
-        amd: 'react',
-      },
-      '@ohif/core': {
-        commonjs2: '@ohif/core',
-        commonjs: '@ohif/core',
-        amd: '@ohif/core',
-        root: '@ohif/core',
-      },
-      '@ohif/ui': {
-        commonjs2: '@ohif/ui',
-        commonjs: '@ohif/ui',
-        amd: '@ohif/ui',
-        root: '@ohif/ui',
-      },
-      'config-point': {
-        commonjs2: 'config-point',
-        commonjs: 'config-point',
-        amd: 'config-point',
-        root: 'config-point',
-      },
-    },
-  ],
   module: {
     rules: [
       {

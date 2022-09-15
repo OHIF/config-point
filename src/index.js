@@ -12,6 +12,8 @@ const plugins = ConfigPoint.getConfig("plugins");
 
 export default ConfigPoint;
 
+ConfigPoint.loadSearchConfigPoint = loadSearchConfigPoint;
+
 export {
   ConfigPoint,
   ConfigPointOperation,
