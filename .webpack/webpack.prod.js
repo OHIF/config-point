@@ -1,12 +1,12 @@
 const path = require('path');
 const pkg = require('../package.json');
 
-const outputFile = 'index.umd.js';
+const outputFile = 'index.js';
 const rootDir = path.resolve(__dirname, '../');
 const outputFolder = path.join(__dirname, '../dist/');
 
 const config = {
-  mode: 'production',
+  mode: 'development',
   entry: rootDir + '/' + pkg.module,
   devtool: 'source-map',
   output: {
@@ -14,6 +14,7 @@ const config = {
     filename: outputFile,
     library: pkg.name,
     libraryTarget: 'umd',
+    globalObject: 'this',
     umdNamedDefine: true,
   },
   module: {
@@ -21,7 +22,7 @@ const config = {
       {
         test: /(\.jsx|\.js|\.tsx|\.ts)$/,
         loader: 'babel-loader',
-        exclude: /(node_modules|bower_components)/,
+        exclude: /(node_modules|test)/,
         resolve: {
           extensions: ['.js', '.jsx', '.ts', '.tsx',],
         },

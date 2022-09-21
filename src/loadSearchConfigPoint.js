@@ -8,7 +8,7 @@ import loadUrl from "./loadUrl";
  * @returns a promise that is completed when the load finishes.
  */
 export default (defaultName, path, parameterName) => {
-  const queryString = window.location.search;
+  const queryString = globalThis?.location?.search || "";
   const urlParams = new URLSearchParams(queryString);
   let loadNames = defaultName ? [defaultName] : null;
   if (parameterName) {

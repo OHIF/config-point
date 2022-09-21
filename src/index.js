@@ -1,3 +1,5 @@
+
+
 import { ConfigPoint } from "./ConfigPoint";
 import loadFile from "./loadFile";
 import loadSearchConfigPoint from "./loadSearchConfigPoint";
