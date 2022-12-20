@@ -1,4 +1,4 @@
-import JSON5 from "json5";
+import parseIon from "./parseIon";
 import ConfigPoint from "./ConfigPoint";
 
 /** Loads a specific configuration and adds it to the import. Does no checking to see if this already exists. */
@@ -7,12 +7,12 @@ export default (name, url) => {
   const loadPromise = new Promise((resolve, reject) => {
     oReq.addEventListener("load", () => {
       try {
-        const json = JSON5.parse(oReq.responseText);
+        const json = parseIon(oReq.responseText);
 
         const itemsRegistered = ConfigPoint.register(json);
         resolve(itemsRegistered);
       } catch (e) {
-        console.log(`Unable to load ${name}`);
+        console.warn("Unable to load", name, e, oReq.responseText);
         reject(`Unable to load ${name} because ${e}`);
       }
     });

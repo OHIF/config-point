@@ -26,7 +26,7 @@ function isPrimitive(val) {
 const getOpValue = (sVal) => {
   if (!sVal || !sVal.configOperation || sVal.isHidden) return undefined;
   const { configOperation } = sVal;
-  const ret = ConfigPoint.ConfigPointOperation[configOperation];
+  const ret = ConfigPoint.getConfig("ConfigPointOperation")?.[configOperation];
   if (!ret) {
     console.log("configOperation", configOperation, "specified but not defined - might be lazy defined later");
   }

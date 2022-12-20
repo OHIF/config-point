@@ -7,7 +7,7 @@ import loadUrl from "./loadUrl";
  * The defaultName parameter is NOT checked for validity, it is assumed to be allowed.
  * @returns a promise that is completed when the load finishes.
  */
-export default (defaultName, path, parameterName) => {
+export default (defaultName, path, parameterName, extension=".ion") => {
   const queryString = globalThis?.location?.search || "";
   const urlParams = new URLSearchParams(queryString);
   let loadNames = defaultName ? [defaultName] : null;
@@ -26,7 +26,7 @@ export default (defaultName, path, parameterName) => {
     const loadPromises = {};
     loadNames.forEach((name) => {
       if (loadPromises[name]) return;
-      const url = ((path && path + "/" + name) || name) + ".json5";
+      const url = ((path && path + "/" + name) || name) + extension;
       loadPromises[name] = loadUrl(name, url);
     });
     return Promise.all(Object.values(loadPromises));

@@ -10,7 +10,7 @@ describe("loadFile", () => {
   it("loads files", async() => {
     const origConfig = ConfigPoint.getConfig("testLoad");
     must(origConfig).be.undefined();
-    await loadFile("tests/testLoad.json5", fsPromises);
+    await loadFile("tests/testLoad.ion", fsPromises);
     const testLoad = ConfigPoint.getConfig("testLoad");
     must(testLoad).not.be.undefined();
   })

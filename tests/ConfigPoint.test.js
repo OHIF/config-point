@@ -8,9 +8,9 @@ import {
   InsertOp,
   safeFunction,
   loadSearchConfigPoint,
-} from "../src/index.js";
+  mergeCreate, mergeObject,
+} from "../dist/config-point";
 // Import for testing internals
-import { mergeCreate, mergeObject } from "../src/ConfigPoint.js";
 import "regenerator-runtime";
 import must from "must";
 
@@ -110,7 +110,7 @@ describe("ConfigPoint.js", () => {
       const callback = jest.fn();
 
       const loadPromise = loadSearchConfigPoint("theme");
-      expect(xhrMock.open).toBeCalledWith("GET", "theme.json5");
+      expect(xhrMock.open).toBeCalledWith("GET", "theme.ion");
       onopen();
 
       await loadPromise;
@@ -149,7 +149,7 @@ describe("ConfigPoint.js", () => {
       jest.spyOn(window, "XMLHttpRequest").mockImplementation(() => xhrMock);
       const callback = jest.fn();
       const loadPromise = loadSearchConfigPoint("theme", "/theme", "theme");
-      expect(xhrMock.open).toBeCalledWith("GET", "/theme/altTheme.json5");
+      expect(xhrMock.open).toBeCalledWith("GET", "/theme/altTheme.ion");
       onopen();
 
       await loadPromise;
@@ -197,7 +197,7 @@ describe("ConfigPoint.js", () => {
       const { inlineSafeFunction } = ConfigPoint.register({
         inlineSafeFunction: {
           configBase: {
-            func: { description: "this is not a function"},
+            func: { description: "this is not a function" },
           },
           func: { configOperation: "safe", replace: true, value: "1+2" },
         }
