@@ -14,6 +14,7 @@ const toJS = (v) => {
   const { name } = type;
   if (type.isNumeric) return v.numberValue();
   switch(name) {
+    case 'symbol':
     case 'string':
       return v.stringValue();
     case 'bool':
