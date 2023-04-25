@@ -15,7 +15,7 @@ const _rootConfigPoints = {};
  */
 function isPrimitive(val) {
   const tof = typeof val;
-  return val === null || val === undefined || tof == "number" || tof == "boolean" || tof == "string" || tof == "bigint";
+  return val === null || val === undefined || tof !== "object";
 }
 
 /**

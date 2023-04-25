@@ -813,6 +813,26 @@ describe("ConfigPoint.js", () => {
     });
   });
 
+  describe("createConfiguration", () => {
+    it("extendsConfiguration", () => {
+      const config1 = ConfigPoint.createConfiguration("config1", {
+        str: "",
+        num: 0,
+        func: () => "original",
+        obj: { original: true },
+        bool: false,
+      });
+      const config2 = ConfigPoint.createConfiguration(
+        "config2",
+        {
+          func: () => "replaced",
+        },
+        config1
+      );
+      expect(config2.func()).toBe("replaced");
+    });
+  });
+
   describe("bindOp", () => {
     it("binds at top level", () => {
       const config = ConfigPoint.createConfiguration("bindConfig", {
