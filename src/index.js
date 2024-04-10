@@ -9,9 +9,13 @@ const register = ConfigPoint.register.bind(ConfigPoint);
 const getConfig = ConfigPoint.getConfig.bind(ConfigPoint);
 const extendConfiguration = ConfigPoint.extendConfiguration.bind(ConfigPoint);
 const createConfiguration = ConfigPoint.createConfiguration.bind(ConfigPoint);
-const plugins = ConfigPoint.getConfig("plugins");
+const plugins = getConfig("plugins");
 
 export default ConfigPoint;
+
+// Re-assign to modules global - this should not be needed but webpack screws up when using config-point
+globalThis.modules ||= {};
+globalThis.modules['config-point'] = ConfigPoint;
 
 export {
   ConfigPoint,

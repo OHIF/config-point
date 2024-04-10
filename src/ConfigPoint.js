@@ -4,7 +4,6 @@ import assignHidden from "./assignHidden";
  * Contains the model data for the extensibility level points.
  * This is implicitly updated by the add/update configuration values.
  */
-let _configPoints = {};
 const _rootConfigPoints = {};
 
 /**
@@ -275,15 +274,15 @@ const BaseImplementation = {
   addConfig(configName, configBaseSrc) {
     if (configBaseSrc === configName) throw new Error(`The configuration point ${configName} uses itself as a base`);
     const configBase = typeof configBaseSrc === "string" ? this.addConfig(configBaseSrc) : configBaseSrc;
-    let config = _configPoints[configName];
+    let config = this._configPoints[configName];
     if (!config) {
-      _configPoints[configName] = config = assignHidden({}, ConfigPointFunctionality);
+      this._configPoints[configName] = config = assignHidden({}, ConfigPointFunctionality);
       Object.defineProperty(config, "_configName", { value: configName });
       Object.defineProperty(this, configName, {
         enumerable: true,
         configurable: true,
         get: () => {
-          return _configPoints[configName];
+          return this._configPoints[configName];
         },
       });
       Object.defineProperty(config, "_configBase", { value: undefined, writable: true });
@@ -350,20 +349,22 @@ const BaseImplementation = {
 
   // Indicate of the given configuration item exists.
   hasConfig(configName) {
-    return _configPoints[configName] != undefined;
+    return this._configPoints[configName] != undefined;
   },
 
   // Gets the given configuration name
   getConfig(config) {
     if (typeof config === "string") {
-      return _configPoints[config];
+      return this._configPoints[config];
     }
     return config;
   },
 
   // Clear all configuration items, mostly used for test purposes.
   clear() {
-    _configPoints = {};
+    for (const key of Object.keys(this._configPoints)) {
+      delete this._configPoints[key];
+    }
     Object.keys(_rootConfigPoints).forEach((key) => {
       this.register(_rootConfigPoints);
     });
@@ -405,6 +406,6 @@ const BaseImplementation = {
 };
 
 // Create a default implementation
-export const ConfigPoint = { name: "ConfigPoint", ...BaseImplementation };
+export const ConfigPoint = { name: "ConfigPoint", ...BaseImplementation, _configPoints: {} };
 
 export default ConfigPoint;

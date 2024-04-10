@@ -10,7 +10,7 @@ export default {
     {
       file: pkg.main,
       format: "umd",
-      name: "dist/config-point.umd.js",
+      name: "modules.config-point",
       sourcemap: true
     },
     {

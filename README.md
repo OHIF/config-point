@@ -183,7 +183,7 @@ with a reference key, for example:
 object: {a: {configOperation: 'replace', reference: 'list'}},
 // Replaces object.a with the list value, AT the time this gets run
 ```
-This is an immediate mode replace, and does it at hte time the instruction is located.  See the reference operation for a functional assignment.
+This is an immediate mode replace, and does it at the time the instruction is located.  See the reference operation for a functional assignment.
 
 ### Sorted Lists
 Instead of referencing simple list values, the ability to create a sorted list from a set of objects 
