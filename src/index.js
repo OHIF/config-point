@@ -1,6 +1,7 @@
 import { ConfigPoint, mergeCreate, mergeObject } from "./ConfigPoint";
 import loadFile from "./loadFile";
 import loadSearchConfigPoint from "./loadSearchConfigPoint";
+import loadIncludedThemes from "./loadIncludedThemes";
 import { ConfigPointOperation, SortOp, ReferenceOp, ReplaceOp, DeleteOp, InsertOp, safeFunction } from "./ConfigPointOperation";
 import "./plugins";
 import parseIon from "./parseIon";
@@ -32,6 +33,7 @@ export {
   getConfig,
   plugins,
   loadSearchConfigPoint,
+  loadIncludedThemes,
   loadFile,
   parseIon,
   // Used for testing

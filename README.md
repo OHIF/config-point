@@ -52,10 +52,73 @@ A typical use of this might be:
     await loadSearchConfigPoint(defaultTheme, themeBasePath, themeUrlParameter);
   }
 ```
-where the loadSearchConfigPoint method is called with the default theme, the URL prefix for all themes, and the URL parameter value.  In this case, the default theme is named theme, and is found in a file theme.json5.  The path for that is the relative path /theme, and the parameter on the URL is theme.  
+where the loadSearchConfigPoint method is called with the default theme, the URL prefix for all themes, and the URL parameter value.  In this case, the default theme is named theme, and is found in a file theme.ion (the default extension).  The path for that is the relative path /theme, and the parameter on the URL is theme.  
 
 The load function returns a promise when all the themes are loaded.  This is also available as `ConfigPoint.loadPromise`
 for use when the themes need to have been loaded before proceeding, but are disconnected from the actual load declaration.
+
+The URL parameter can repeat, and each value can be a comma separated list, for example
+`?theme=dark,large&theme=print`.  The themes register in that order, so a later theme extends an
+earlier one, whichever response arrives first.  Each name must match `[a-zA-Z0-9]+`, so that a name
+cannot leave its path.
+
+### Options of loadSearchConfigPoint
+The full signature is either of:
+```js
+loadSearchConfigPoint(defaultName, path, parameterName, extension = ".ion", options = {});
+loadSearchConfigPoint({ defaultName, paths, parameterName, extension = ".ion", loadResource, includeTheme, pathPrefix });
+```
+* `path` / `paths` - one path, or a list of paths.  A name loads from the first path that has it: a non-OK response, a
+  fetch error, a parse error or a `loadResource` hook that throws moves to the next path.
+* `loadResource` - an async loader hook, see below.
+* `includeTheme` - `true` to also load the themes that the `includeTheme` config point lists, see below.  Default `false`.
+* `pathPrefix` - the prefix of a relative `includeTheme` URL.  Default `/`.
+
+```js
+await loadSearchConfigPoint({
+  defaultName: 'theme',
+  paths: ['/api/themes', '/theme'],
+  parameterName: 'theme',
+  includeTheme: true,
+});
+```
+
+### The loadResource hook
+The hook is an option of each call (there is no module level default), so that two loads can use two different hooks.
+```js
+loadResource({ kind, name, url, defaultLoad }) // async
+```
+* `kind` is `'theme'`, `name` is the theme name (or the `includeTheme` key), and `url` is the URL to load.
+* Return the data: a parsed config object, or a module whose `.default` is one.
+* Return `undefined` to use the regular load.
+* `defaultLoad(url, init?)` is the regular load (fetch and the ION/JSON5 parse).  It accepts fetch options, such as headers.
+* A hook that throws gives the same result as a failed regular load.
+
+For example, to send a token to one path only:
+```js
+const loadResource = ({ url, defaultLoad }) =>
+  url.startsWith('/api/') ? defaultLoad(url, { headers: { Authorization: `Bearer ${token}` } }) : undefined;
+```
+The regular load uses `fetch` when the environment has it, and otherwise `XMLHttpRequest`.
+
+### includeTheme
+A theme can list other themes to load in an `includeTheme` config point:
+```js
+{
+  includeTheme: { dark: 'dark', logo: 'branding/logo.json5' },
+  ...
+}
+```
+* A value that is a theme name (`[a-zA-Z0-9]+`) loads from the path list, with the extension, as the search parameter does.
+* Another value is a URL: absolute (`http://` or `https://`), root relative (`/...`), or relative to `pathPrefix`.
+* The themes that one config includes load in parallel, and each one registers when it arrives.  Then the themes that
+  those themes include load, until no new theme remains.  Each included theme or URL loads once only.  A start theme (from the
+  search parameter) that a theme includes loads again.
+* A failed include rejects the load.
+
+`loadIncludedThemes(loaded, { paths, extension, pathPrefix, loadResource })` does the same for configs that are
+already registered, or for a promise of them, such as the result of `loadSearchConfigPoint`.  It returns a promise
+of `loaded`.
 
 The theme files are JSON5 encoded, the advantages of which are:
 * Comments are permitted in JSON5
