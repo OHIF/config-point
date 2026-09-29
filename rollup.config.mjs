@@ -2,7 +2,10 @@ import babel from "@rollup/plugin-babel";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import json from "@rollup/plugin-json";
-import pkg from "./package.json" assert { type: "json" };
+import { readFileSync } from "fs";
+
+// Read package.json as text: the JSON import assertion syntax changed across Node versions.
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"));
 
 export default {
   input: "src/index.js",
